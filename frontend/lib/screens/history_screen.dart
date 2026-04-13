@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 
@@ -46,6 +47,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  Future<void> _removeHistory(int index) async {
+    final item = _history[index];
+    final String historyId = item['id'];
+
+    setState(() {
+      _history.removeAt(index);
+    });
+
+    try {
+      await http.delete(Uri.parse('$_baseUrl/api/history/$historyId'));
+      Fluttertoast.showToast(msg: "History record deleted", backgroundColor: Colors.redAccent);
+    } catch (e) {
+      debugPrint("Error deleting history: $e");
+      Fluttertoast.showToast(msg: "Delete failed", backgroundColor: Colors.orange);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -85,6 +103,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(item['timestamp']['_seconds'] != null ? DateTime.fromMillisecondsSinceEpoch(item['timestamp']['_seconds'] * 1000).toIso8601String() : DateTime.now().toIso8601String()))
                 : "Recent",
               style: const TextStyle(fontSize: 12),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.grey),
+              onPressed: () => _removeHistory(index),
             ),
             children: [
               Padding(

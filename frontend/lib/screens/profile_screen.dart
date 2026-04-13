@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers/theme_provider.dart';
@@ -34,6 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _logout(BuildContext context) async {
     await AuthService().logout();
     if (!context.mounted) return;
+    Fluttertoast.showToast(msg: "Logged out successfully", backgroundColor: const Color(0xFF1E2A38));
     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
@@ -65,6 +67,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               value: isDark,
               onChanged: (val) {
                 themeProvider.toggleTheme(val);
+                Fluttertoast.showToast(
+                  msg: val ? "Dark Mode ON" : "Light Mode ON",
+                  backgroundColor: val ? Colors.black : Colors.white,
+                  textColor: val ? Colors.white : Colors.black,
+                  gravity: ToastGravity.SNACKBAR
+                );
               },
             ),
           ),
@@ -87,6 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   setState(() => _language = val);
                   SharedPreferences prefs = await SharedPreferences.getInstance();
                   await prefs.setString('language', val);
+                  Fluttertoast.showToast(msg: "Language changed to $val");
                 }
               },
             ),

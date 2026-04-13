@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 
@@ -49,8 +50,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
     try {
       await http.delete(Uri.parse('$_baseUrl/api/favorites/$favoriteId'));
+      Fluttertoast.showToast(msg: "Removed from favorites", backgroundColor: Colors.redAccent);
     } catch (e) {
       debugPrint("Error deleting favorite: $e");
+      Fluttertoast.showToast(msg: "Could not remove favorite", backgroundColor: Colors.orange);
     }
   }
 

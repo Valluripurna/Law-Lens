@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'dart:async';
 
@@ -18,6 +21,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _carouselController = ScrollController();
   final List<Message> _messages = [];
+  final Set<int> _favoritedIndices = {};
   
   bool _isLoading = false;
   bool _vanishMode = false;
@@ -125,7 +129,7 @@ class _ChatScreenState extends State<ChatScreen> {
       String responseText;
       
       if (_attachedImagePath != null) {
-        // IMAGE UPLOAD
+        // IMAGE UPLOAD (No stream)
         var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/api/upload-image'));
         request.fields['userId'] = _userId ?? '';
         request.fields['question'] = promptText;
@@ -136,30 +140,52 @@ class _ChatScreenState extends State<ChatScreen> {
         var streamedResponse = await request.send().timeout(const Duration(seconds: 45));
         var response = await http.Response.fromStream(streamedResponse);
         var jsonRes = json.decode(response.body);
-        responseText = jsonRes['answer'] ?? "Could not analyze image.";
+        
+        setState(() {
+          _messages.add(Message(text: jsonRes['answer'] ?? "Could not analyze image.", isUser: false));
+          _isLoading = false;
+        });
         _attachedImagePath = null;
 
-      } else {
-        // TEXT CHAT
-        final response = await http.post(
-          Uri.parse('$_baseUrl/api/chat'),
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode({
-            'userId': _userId,
-            'question': promptText,
-            'language': _language,
-            'useVanishMode': _vanishMode,
-          }),
-        ).timeout(const Duration(seconds: 45));
-        
-        final jsonRes = json.decode(response.body);
-        responseText = jsonRes['answer'] ?? "The Law Lens server is momentarily silent. Please try again.";
-      }
+        setState(() {
+          _messages.add(Message(text: "...", isUser: false, isStreaming: true));
+          _isLoading = false;
+        });
 
-      setState(() {
-        _messages.add(Message(text: responseText, isUser: false));
-        _isLoading = false;
-      });
+        final streamedResponse = await request.send().timeout(const Duration(seconds: 45));
+        bool firstChunk = true;
+        
+        await for (var chunk in streamedResponse.stream.transform(utf8.decoder)) {
+          final lines = chunk.split('\n');
+          for (var line in lines) {
+            if (line.startsWith('data: ')) {
+               final dataStr = line.substring(6);
+               if (dataStr.trim() == '[DONE]') {
+                 setState(() {
+                   _messages.last = Message(text: _messages.last.text, isUser: false, isStreaming: false);
+                 });
+                 break;
+               }
+               try {
+                 final jsonData = json.decode(dataStr);
+                 if (jsonData['chunk'] != null) {
+                    setState(() {
+                      var lastMsg = _messages.last;
+                      if (firstChunk) {
+                        _messages.last = Message(text: jsonData['chunk'], isUser: false, isStreaming: true);
+                        firstChunk = false;
+                      } else {
+                        _messages.last = Message(text: lastMsg.text + jsonData['chunk'], isUser: false, isStreaming: true);
+                      }
+                    });
+                 } else if (jsonData['error'] != null) {
+                    _showError(jsonData['error']);
+                 }
+               } catch (e) {}
+            }
+          }
+        }
+      }
 
     } catch (e) {
       String errMsg = "Connection to Law Lens server timed out or failed. Please check your internet or Render backend status. Error: $e";
@@ -236,6 +262,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (response.statusCode == 200) {
         if (mounted) {
+          setState(() {
+            _favoritedIndices.add(index);
+          });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Cloud Synced: Added to Favorites! 💖"),
             backgroundColor: Colors.green,
@@ -371,10 +400,29 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        msg.text,
-                        style: TextStyle(color: msg.isUser ? Colors.white : Theme.of(context).textTheme.bodyMedium?.color),
-                      ),
+                      msg.isUser
+                        ? Text(
+                            msg.text,
+                            style: TextStyle(color: Colors.white),
+                          )
+                        : MarkdownBody(
+                            data: msg.text + (msg.isStreaming ? " █" : ""),
+                            styleSheet: MarkdownStyleSheet(
+                              p: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, height: 1.5, fontSize: 15),
+                              strong: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontWeight: FontWeight.bold),
+                              a: const TextStyle(color: Colors.blueAccent, decoration: TextDecoration.underline),
+                            ),
+                            onTapLink: (text, href, title) async {
+                              if (href != null) {
+                                final uri = Uri.parse(href);
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri);
+                                } else {
+                                  Fluttertoast.showToast(msg: "Could not launch URL");
+                                }
+                              }
+                            },
+                          ),
                       if (!msg.isUser && !msg.isError)
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
@@ -382,14 +430,27 @@ class _ChatScreenState extends State<ChatScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
+                                icon: const Icon(Icons.copy, size: 20, color: Colors.blueGrey),
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: msg.text));
+                                  Fluttertoast.showToast(msg: "Copied to clipboard!");
+                                },
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.only(right: 16),
+                              ),
+                              IconButton(
                                 icon: const Icon(Icons.share, size: 20, color: Colors.blueAccent),
                                 onPressed: () => SharePlus.instance.share(ShareParams(text: msg.text)),
                                 constraints: const BoxConstraints(),
                                 padding: const EdgeInsets.only(right: 16),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.favorite_border, size: 20, color: Colors.redAccent),
-                                onPressed: () => _addToFavorites(index),
+                                icon: Icon(
+                                  _favoritedIndices.contains(index) ? Icons.favorite : Icons.favorite_border, 
+                                  size: 20, 
+                                  color: Colors.redAccent
+                                ),
+                                onPressed: _favoritedIndices.contains(index) ? null : () => _addToFavorites(index),
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                               ),
@@ -485,5 +546,6 @@ class Message {
   final String text;
   final bool isUser;
   final bool isError;
-  Message({required this.text, required this.isUser, this.isError = false});
+  final bool isStreaming;
+  Message({required this.text, required this.isUser, this.isError = false, this.isStreaming = false});
 }

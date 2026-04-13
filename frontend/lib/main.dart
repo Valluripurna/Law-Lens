@@ -37,10 +37,12 @@ class LawLensApp extends StatelessWidget {
     const Color primaryNavy = Color(0xFF1E2A38);
     const Color accentGold = Color(0xFFD4AF37);
 
-    return MaterialApp(
-      title: 'Law Lens',
-      debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.light,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'Law Lens',
+          debugShowCheckedModeBanner: false,
+          themeMode: themeProvider.themeMode,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: primaryNavy, 
@@ -72,6 +74,8 @@ class LawLensApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const SplashScreen(),
+    );
+      },
     );
   }
 }

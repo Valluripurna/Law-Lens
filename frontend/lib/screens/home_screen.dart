@@ -28,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset('assets/logo.png', height: 28, width: 28),
+            ClipOval(child: Image.asset('assets/logo.png', height: 28, width: 28, fit: BoxFit.cover)),
             const SizedBox(width: 12),
             const Text('Law Lens', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0)),
           ],

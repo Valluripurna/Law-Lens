@@ -197,22 +197,43 @@ User Question: ${question}
 Context: ${contextString}
 Answer:`;
 
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
       model: "llama-3.3-70b-versatile",
+      stream: true,
     });
-    const answerText = chatCompletion.choices[0]?.message?.content || "No response generated.";
+
+    let answerText = "";
+    for await (const chunk of chatCompletion) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      if (content) {
+        answerText += content;
+        // Broadcast the chunk to the flutter frontend iteratively
+        res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
+      }
+    }
+
+    console.log(`[Groq] Streaming finish in ${Date.now() - aiStart}ms`);
     
-    console.log(`[Groq] Responded in ${Date.now() - aiStart}ms`);
+    // Complete the transaction manually
+    res.write(`data: [DONE]\n\n`);
+    res.end();
 
-    // 3. Save History (Async)
+    // 3. Save History asynchronously
     saveChatHistory(userId, question, answerText, useVanishMode);
-
-    console.log(`[API] Total request handled in ${Date.now() - start}ms`);
-    res.json({ answer: answerText });
+    
   } catch (error) {
     console.error("[API] Error:", error.message);
-    res.json({ answer: `GROQ_ERROR: ${error.message}. Please verify your API Key in Render environment variables.` });
+    if (!res.headersSent) {
+      res.json({ answer: `GROQ_ERROR: ${error.message}. Please verify your API Key in Render environment variables.` });
+    } else {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    }
   }
 });
 
@@ -267,6 +288,18 @@ app.get('/api/history', async (req, res) => {
     res.json(history);
   } catch (error) {
     console.error("History Error:", error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// Delete History Endpoint
+app.delete('/api/history/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await firestore.collection('chats').doc(id).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error("History Delete Error:", error.message);
     res.status(500).json({ error: "Database error" });
   }
 });
