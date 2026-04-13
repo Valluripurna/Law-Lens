@@ -126,8 +126,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      String responseText;
-      
       if (_attachedImagePath != null) {
         // IMAGE UPLOAD (No stream)
         var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/api/upload-image'));
@@ -137,8 +135,8 @@ class _ChatScreenState extends State<ChatScreen> {
         request.fields['useVanishMode'] = _vanishMode.toString();
         request.files.add(await http.MultipartFile.fromPath('image', _attachedImagePath!));
 
-        var streamedResponse = await request.send().timeout(const Duration(seconds: 45));
-        var response = await http.Response.fromStream(streamedResponse);
+        var sResponse = await request.send().timeout(const Duration(seconds: 45));
+        var response = await http.Response.fromStream(sResponse);
         var jsonRes = json.decode(response.body);
         
         setState(() {
@@ -147,15 +145,26 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         _attachedImagePath = null;
 
+      } else {
+        // TEXT CHAT STREAMING
+        final request = http.Request('POST', Uri.parse('$_baseUrl/api/chat'));
+        request.headers['Content-Type'] = 'application/json';
+        request.body = json.encode({
+          'userId': _userId,
+          'question': promptText,
+          'language': _language,
+          'useVanishMode': _vanishMode,
+        });
+
         setState(() {
           _messages.add(Message(text: "...", isUser: false, isStreaming: true));
           _isLoading = false;
         });
 
-        final streamedResponse = await request.send().timeout(const Duration(seconds: 45));
+        final sResponse = await request.send().timeout(const Duration(seconds: 45));
         bool firstChunk = true;
         
-        await for (var chunk in streamedResponse.stream.transform(utf8.decoder)) {
+        await for (var chunk in sResponse.stream.transform(utf8.decoder)) {
           final lines = chunk.split('\n');
           for (var line in lines) {
             if (line.startsWith('data: ')) {
@@ -181,7 +190,9 @@ class _ChatScreenState extends State<ChatScreen> {
                  } else if (jsonData['error'] != null) {
                     _showError(jsonData['error']);
                  }
-               } catch (e) {}
+               } catch (e) {
+                 // Ignore parsing errors for partial chunks
+               }
             }
           }
         }
