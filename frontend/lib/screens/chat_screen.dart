@@ -7,8 +7,13 @@ import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -21,6 +26,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _carouselController = ScrollController();
   final List<Message> _messages = [];
+  List<Message> _normalChatCache = [];
   final Set<int> _favoritedIndices = {};
   
   bool _isLoading = false;
@@ -28,6 +34,8 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _userId;
   String _language = "English";
   String? _attachedImagePath;
+  String? _attachedPdfText;
+  String? _attachedPdfName;
   Timer? _carouselTimer;
   final List<String> _quickQueries = [
     "Helmet fine?",
@@ -76,7 +84,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadUserAndHistory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      _userId = prefs.getString('userUid');
+      _userId = prefs.getString('userId');
       _language = prefs.getString('language') ?? "English";
     });
     if (_userId != null) {
@@ -107,13 +115,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // CALLING BACKEND API
   Future<void> _sendMessage(String text) async {
-    if (text.trim().isEmpty && _attachedImagePath == null) return;
+    if (text.trim().isEmpty && _attachedImagePath == null && _attachedPdfText == null) return;
     String promptText = text.trim();
     _messageController.clear();
     
     String uiText = promptText;
     if (_attachedImagePath != null) {
       uiText = "📸 [Image Attached] $uiText";
+    } else if (_attachedPdfText != null) {
+      uiText = "📄 [PDF: $_attachedPdfName] $uiText";
+      promptText = "CONTEXT FROM PDF DOCUMENT:\n$_attachedPdfText\n\nUSER QUESTION: $promptText";
     }
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -144,6 +155,8 @@ class _ChatScreenState extends State<ChatScreen> {
           _isLoading = false;
         });
         _attachedImagePath = null;
+        _attachedPdfText = null;
+        _attachedPdfName = null;
 
       } else {
         // TEXT CHAT STREAMING
@@ -212,7 +225,33 @@ class _ChatScreenState extends State<ChatScreen> {
     
     setState(() {
        _attachedImagePath = image.path;
+       _attachedPdfText = null;
     });
+  }
+
+  Future<void> _pickPDF() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+
+    if (result != null && result.files.single.path != null) {
+      final File file = File(result.files.single.path!);
+      try {
+        final PdfDocument document = PdfDocument(inputBytes: await file.readAsBytes());
+        final String text = PdfTextExtractor(document).extractText();
+        document.dispose();
+        
+        setState(() {
+          _attachedPdfText = text;
+          _attachedPdfName = result.files.single.name;
+          _attachedImagePath = null;
+        });
+        Fluttertoast.showToast(msg: "PDF Picked & Parsed!");
+      } catch (e) {
+        _showError("Failed to parse PDF: $e");
+      }
+    }
   }
 
   void _showAttachmentOptions() {
@@ -236,7 +275,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 title: const Text('Upload PDF (Legal Notice/FIR)'),
                 onTap: () {
                   Navigator.pop(context);
-                  Fluttertoast.showToast(msg: 'PDF processing is coming in Phase 3!', backgroundColor: const Color(0xFF1E2A38), textColor: const Color(0xFFD4AF37));
+                  _pickPDF();
                 },
               ),
             ],
@@ -346,9 +385,20 @@ class _ChatScreenState extends State<ChatScreen> {
                 onTap: () {
                   setState(() {
                     _vanishMode = !_vanishMode;
-                    _messages.clear();
-                    if (!_vanishMode) {
-                      _fetchHistory();
+                    if (_vanishMode) {
+                      // Entering Vanish Mode: Cache current chat
+                      _normalChatCache = List.from(_messages);
+                      _messages.clear();
+                      _favoritedIndices.clear();
+                    } else {
+                      // Exiting Vanish Mode: Restore from cache or fetch latest history
+                      _messages.clear();
+                      if (_normalChatCache.isNotEmpty) {
+                        _messages.addAll(_normalChatCache);
+                        _normalChatCache.clear();
+                      } else {
+                        _fetchHistory();
+                      }
                     }
                   });
                   Fluttertoast.showToast(
@@ -489,35 +539,66 @@ class _ChatScreenState extends State<ChatScreen> {
             itemCount: _quickQueries.length * 100,
             itemBuilder: (context, index) {
               final q = _quickQueries[index % _quickQueries.length];
+              final colors = [
+                Colors.blue.shade100,
+                Colors.orange.shade100,
+                Colors.green.shade100,
+                Colors.purple.shade100,
+                Colors.pink.shade100,
+              ];
+              final Color chipColor = colors[index % colors.length];
+
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 child: ActionChip(
-                  label: Text(q, style: const TextStyle(fontSize: 12)),
-                  backgroundColor: const Color(0xFF1E2A38).withAlpha(25),
+                  label: Text(q, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  backgroundColor: chipColor,
                   side: BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   onPressed: () => _sendMessage(q),
                 ),
               );
             },
           ),
         ),
-        if (_attachedImagePath != null)
-           Container(
-             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-             margin: const EdgeInsets.symmetric(horizontal: 16),
-             decoration: BoxDecoration(
-               color: Colors.grey.shade200,
-               borderRadius: BorderRadius.circular(8)
-             ),
-             child: Row(
-               children: [
-                 const Icon(Icons.image, color: Colors.green),
-                 const SizedBox(width: 8),
-                 const Expanded(child: Text("Image Attached Ready", style: TextStyle(color: Colors.black87))),
-                 IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: () => setState(() => _attachedImagePath = null)),
-               ],
-             ),
-           ),
+         if (_attachedImagePath != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(8)
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.image, color: Colors.green),
+                  const SizedBox(width: 8),
+                  const Expanded(child: Text("Image Attached Ready", style: TextStyle(color: Colors.black87))),
+                  IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: () => setState(() => _attachedImagePath = null)),
+                ],
+              ),
+            ),
+           if (_attachedPdfText != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.redAccent.withAlpha(50))
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.picture_as_pdf, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text("Attached: $_attachedPdfName", style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.bold))),
+                  IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: () => setState(() {
+                    _attachedPdfText = null;
+                    _attachedPdfName = null;
+                  })),
+                ],
+              ),
+            ),
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Row(

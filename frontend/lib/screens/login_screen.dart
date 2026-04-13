@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
             // The result already has the credential. We just need to save.
             SharedPreferences prefs = await SharedPreferences.getInstance();
             await prefs.setString('jwt_token', uid);
-            await prefs.setString('userUid', uid);
+            await prefs.setString('userId', uid);
             await prefs.setString('userEmail', email);
 
             if (!mounted) return;

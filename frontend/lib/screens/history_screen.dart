@@ -26,7 +26,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _loadHistory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _userId = prefs.getString('userUid');
+    _userId = prefs.getString('userId');
     
     if (_userId == null) {
       setState(() => _isLoading = false);

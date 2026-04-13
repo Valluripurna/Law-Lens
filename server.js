@@ -252,6 +252,10 @@ app.post('/api/upload-image', multer().single('image'), async (req, res) => {
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
+          role: "system",
+          content: "You are an expert Indian Legal Assistant. Analyze the provided image/document with high precision. Provide detailed, clear, and structured legal insights based only on the visual evidence provided."
+        },
+        {
           role: "user",
           content: [
             { type: "text", text: prompt },
