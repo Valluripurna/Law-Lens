@@ -28,14 +28,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     if (userId == null) return;
 
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/api/favorites?userId=\$userId'));
+      final response = await http.get(Uri.parse('$_baseUrl/api/favorites?userId=$userId'));
       if (response.statusCode == 200) {
         setState(() {
           _favorites = json.decode(response.body);
         });
       }
     } catch (e) {
-      debugPrint("Error fetching favorites: \$e");
+      debugPrint("Error fetching favorites: $e");
     }
   }
 
@@ -48,9 +48,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     });
 
     try {
-      await http.delete(Uri.parse('$_baseUrl/api/favorites/\$favoriteId'));
+      await http.delete(Uri.parse('$_baseUrl/api/favorites/$favoriteId'));
     } catch (e) {
-      debugPrint("Error deleting favorite: \$e");
+      debugPrint("Error deleting favorite: $e");
     }
   }
 
