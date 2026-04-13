@@ -213,7 +213,7 @@ Answer:`;
 });
 
 // Image Upload (Vision)
-app.post('/api/upload-image', upload.single('image'), async (req, res) => {
+app.post('/api/upload-image', multer().single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No image file provided" });
   const { userId, question = "Explain this legally.", language = "English", useVanishMode } = req.body;
 
