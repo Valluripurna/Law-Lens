@@ -40,8 +40,11 @@ app.get('/api/health', (req, res) => {
 // List Models Diagnostic
 app.get('/api/models', async (req, res) => {
   try {
-    const models = await genAI.listModels();
-    res.json(models);
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return res.json({ error: "No API Key configured" });
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+    const data = await response.json();
+    res.json(data);
   } catch (error) {
     res.json({ error: error.message });
   }
@@ -181,7 +184,7 @@ app.post('/api/chat', async (req, res) => {
       : "No exact law found. Provide general helpful guidance based on Indian Law.";
 
     // 2. Direct GEMINI Connection (Clean & Simple)
-    console.log(`[Gemini] Requesting response from gemini-1.5-flash...`);
+    console.log(`[Gemini] Requesting response from gemini-pro...`);
     const geminiStart = Date.now();
     
     const prompt = `You are a legal assistant for Law Lens. Explain the law in simple language for an Indian citizen.
@@ -194,7 +197,7 @@ User Question: ${question}
 Context: ${contextString}
 Answer:`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const answerText = response.text();
@@ -227,8 +230,8 @@ app.post('/api/upload-image', multer().single('image'), async (req, res) => {
       }
     };
 
-    console.log("[Gemini] Requesting Vision Analysis natively on gemini-1.5-flash...");
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    console.log("[Gemini] Requesting Vision Analysis natively on gemini-pro-vision...");
+    const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
     const answerText = response.text();
