@@ -69,13 +69,11 @@ try {
 }
 
 // API KEY Setup
-if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.length < 20) {
-  console.error("🚨 CRITICAL ERROR: GEMINI_API_KEY environment variable is missing or invalid!");
-  console.error("Please add a valid Google AI Studio API key to your Render.com Environment Dashboard.");
+if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.length < 20) {
+  console.error("🚨 CRITICAL ERROR: GROQ_API_KEY environment variable is missing or invalid!");
+  console.error("Please add a valid Groq API key to your Render.com Environment Dashboard.");
   process.exit(1); // Force crash the server so it doesn't fail silently later
 }
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Optimized RAG Helper
 const findRelevantLawsFirestore = async (query) => {
