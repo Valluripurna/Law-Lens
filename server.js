@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const pdfParse = require('pdf-parse');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 const admin = require('firebase-admin');
 
 const app = express();
@@ -28,7 +28,7 @@ app.get('/api/health', (req, res) => {
     uptime: process.uptime(),
     timestamp: Date.now(),
     env: {
-      gemini_key_exists: !!process.env.GEMINI_API_KEY,
+      groq_key_exists: !!process.env.GROQ_API_KEY,
       service_account_exists: !!process.env.SERVICE_ACCOUNT_JSON,
       port: process.env.PORT || 3000
     },
@@ -37,14 +37,15 @@ app.get('/api/health', (req, res) => {
   res.json(health);
 });
 
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "dummy_key_to_prevent_crash_before_env_injection" });
+
 // List Models Diagnostic
 app.get('/api/models', async (req, res) => {
   try {
-    const key = process.env.GEMINI_API_KEY;
+    const key = process.env.GROQ_API_KEY;
     if (!key) return res.json({ error: "No API Key configured" });
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-    const data = await response.json();
-    res.json(data);
+    const response = await groq.models.list();
+    res.json(response);
   } catch (error) {
     res.json({ error: error.message });
   }
@@ -183,9 +184,9 @@ app.post('/api/chat', async (req, res) => {
       ? relevantLaws.map(l => `Title: ${l.title}\nSection: ${l.section}\nContent: ${l.content}\nFine: ${l.fine}`).join("\n\n")
       : "No exact law found. Provide general helpful guidance based on Indian Law.";
 
-    // 2. Direct GEMINI Connection (Clean & Simple)
-    console.log(`[Gemini] Requesting response from gemini-pro...`);
-    const geminiStart = Date.now();
+    // 2. Direct GROQ Connection
+    console.log(`[Groq] Requesting response from llama-3.3-70b-versatile...`);
+    const aiStart = Date.now();
     
     const prompt = `You are a legal assistant for Law Lens. Explain the law in simple language for an Indian citizen.
 Rules:
@@ -197,12 +198,13 @@ User Question: ${question}
 Context: ${contextString}
 Answer:`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const answerText = response.text();
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.3-70b-versatile",
+    });
+    const answerText = chatCompletion.choices[0]?.message?.content || "No response generated.";
     
-    console.log(`[Gemini] Responded in ${Date.now() - geminiStart}ms`);
+    console.log(`[Groq] Responded in ${Date.now() - aiStart}ms`);
 
     // 3. Save History (Async)
     saveChatHistory(userId, question, answerText, useVanishMode);
@@ -211,7 +213,7 @@ Answer:`;
     res.json({ answer: answerText });
   } catch (error) {
     console.error("[API] Error:", error.message);
-    res.json({ answer: `GEMINI_ERROR: ${error.message}. Please verify your API Key in Render environment variables.` });
+    res.json({ answer: `GROQ_ERROR: ${error.message}. Please verify your API Key in Render environment variables.` });
   }
 });
 
@@ -223,24 +225,29 @@ app.post('/api/upload-image', multer().single('image'), async (req, res) => {
   try {
     const prompt = `Analyze this legal document/scene. Question: ${question}. Reply in ${language}.`;
 
-    const imagePart = {
-      inlineData: {
-        data: req.file.buffer.toString("base64"),
-        mimeType: req.file.mimetype
-      }
-    };
+    const base64Image = req.file.buffer.toString("base64");
+    const mimeType = req.file.mimetype;
 
-    console.log("[Gemini] Requesting Vision Analysis natively on gemini-pro-vision...");
-    const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
-    const result = await model.generateContent([prompt, imagePart]);
-    const response = await result.response;
-    const answerText = response.text();
+    console.log("[Groq] Requesting Vision Analysis natively on llama-3.2-11b-vision-preview...");
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
+          ]
+        }
+      ],
+      model: "llama-3.2-11b-vision-preview",
+    });
+    const answerText = chatCompletion.choices[0]?.message?.content || "No vision response";
 
     saveChatHistory(userId, question, answerText, useVanishMode);
     res.json({ answer: answerText });
   } catch (error) {
     console.error(`[Vision] Error:`, error.message);
-    res.json({ answer: `GEMINI_ERROR (Vision): ${error.message}` });
+    res.json({ answer: `GROQ_ERROR (Vision): ${error.message}` });
   }
 });
 
