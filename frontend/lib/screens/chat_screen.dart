@@ -229,7 +229,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _pickPDF() async {
     fp.FilePickerResult? result = await fp.FilePicker.platform.pickFiles(
-      type: FileType.custom,
+      type: fp.FileType.custom,
       allowedExtensions: ['pdf'],
     );
 
