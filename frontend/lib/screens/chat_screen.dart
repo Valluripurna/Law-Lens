@@ -7,9 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -230,7 +228,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _pickPDF() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    fp.FilePickerResult? result = await fp.FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
     );
