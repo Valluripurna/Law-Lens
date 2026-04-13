@@ -36,7 +36,7 @@ class _ChatScreenState extends State<ChatScreen> {
   ];
 
   // BACKEND URL - Updated for Render
-  static const String _baseUrl = "https://law-lens-backend-det5.onrender.com";
+  static const String _baseUrl = "https://law-lens-backend-9yhz.onrender.com";
 
   @override
   void initState() {

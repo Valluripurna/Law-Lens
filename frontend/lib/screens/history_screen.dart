@@ -15,7 +15,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<dynamic> _history = [];
   bool _isLoading = true;
   String? _userId;
-  final String _baseUrl = "https://law-lens-backend-det5.onrender.com";
+  final String _baseUrl = "https://law-lens-backend-9yhz.onrender.com";
 
   @override
   void initState() {
