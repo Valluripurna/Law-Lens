@@ -210,23 +210,47 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _addToFavorites(int index) async {
-    String response = _messages[index].text;
+    String responseText = _messages[index].text;
     String question = index > 0 && _messages[index-1].isUser ? _messages[index-1].text : "Saved Response";
     
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> favs = prefs.getStringList('favorites') ?? [];
-    favs.add(json.encode({
-      'question': question, 
-      'answer': response, 
-      'timestamp': DateTime.now().toIso8601String()
-    }));
-    await prefs.setStringList('favorites', favs);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Added to Favorites! 💖"),
-        backgroundColor: Colors.green,
-      ));
+    if (_userId == null || _userId!.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Cloud Error: You must be logged in to save favorites."),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/favorites'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'userId': _userId,
+          'question': question,
+          'answer': responseText,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Cloud Synced: Added to Favorites! 💖"),
+            backgroundColor: Colors.green,
+          ));
+        }
+      } else {
+        throw Exception("Failed to sync to cloud.");
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Could not save favorite to cloud: $e"),
+          backgroundColor: Colors.orange,
+        ));
+      }
     }
   }
 

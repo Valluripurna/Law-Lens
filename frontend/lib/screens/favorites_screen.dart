@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 
@@ -13,6 +14,8 @@ class FavoritesScreen extends StatefulWidget {
 class _FavoritesScreenState extends State<FavoritesScreen> {
   List<dynamic> _favorites = [];
 
+  final String _baseUrl = "https://law-lens-backend-9yhz.onrender.com";
+
   @override
   void initState() {
     super.initState();
@@ -21,20 +24,34 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Future<void> _loadFavorites() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> favStrings = prefs.getStringList('favorites') ?? [];
-    setState(() {
-      _favorites = favStrings.map((str) => json.decode(str)).toList().reversed.toList();
-    });
+    String? userId = prefs.getString('userId');
+    if (userId == null) return;
+
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/api/favorites?userId=\$userId'));
+      if (response.statusCode == 200) {
+        setState(() {
+          _favorites = json.decode(response.body);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching favorites: \$e");
+    }
   }
 
   Future<void> _removeFavorite(int index) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> favStrings = prefs.getStringList('favorites') ?? [];
-    // The list is reversed for display, so we must find the original index
-    int originalIndex = favStrings.length - 1 - index;
-    favStrings.removeAt(originalIndex);
-    await prefs.setStringList('favorites', favStrings);
-    _loadFavorites();
+    final item = _favorites[index];
+    final String favoriteId = item['id'];
+
+    setState(() {
+      _favorites.removeAt(index);
+    });
+
+    try {
+      await http.delete(Uri.parse('$_baseUrl/api/favorites/\$favoriteId'));
+    } catch (e) {
+      debugPrint("Error deleting favorite: \$e");
+    }
   }
 
   @override
@@ -80,8 +97,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: Text(
-              item['timestamp'] != null 
-                ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(item['timestamp']))
+              item['timestamp'] != null && item['timestamp']['_seconds'] != null
+                ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.fromMillisecondsSinceEpoch(item['timestamp']['_seconds'] * 1000))
                 : "Saved Response",
               style: const TextStyle(fontSize: 12),
             ),

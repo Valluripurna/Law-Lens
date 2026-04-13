@@ -186,9 +186,10 @@ app.post('/api/chat', async (req, res) => {
     console.log(`[Groq] Requesting response from llama-3.3-70b-versatile...`);
     const aiStart = Date.now();
     
-    const prompt = `You are a legal assistant for Law Lens. Explain the law in simple language for an Indian citizen.
+    const prompt = `You are a legal expert AI for Law Lens. Provide an extremely detailed, exhaustive, and comprehensive legal breakdown for an Indian citizen.
 Rules:
-- Keep the answer short and practical. Mention fines if applicable.
+- Provide an extensive legal breakdown with precise clarity. Include multiple paragraphs, exact IPC/BNS sections, penalties, and historical context if applicable.
+- You absolutely MUST formulate practical reference URL web links to authoritative sources (e.g. India Code, Supreme Court Archives, or Ministry Websites) at the bottom of your response to allow the user to read more.
 - Respond strictly in ${language}.
 - Include end disclaimer: "This is general information and not legal advice."
 
@@ -266,6 +267,54 @@ app.get('/api/history', async (req, res) => {
     res.json(history);
   } catch (error) {
     console.error("History Error:", error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// Add Favorite Endpoint
+app.post('/api/favorites', async (req, res) => {
+  const { userId, question, answer } = req.body;
+  if (!userId || !question || !answer) return res.status(400).json({ error: "Missing required fields" });
+  try {
+    const docRef = await firestore.collection('favorites').add({
+      user_id: userId,
+      question: question,
+      answer: answer,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+    res.json({ success: true, id: docRef.id });
+  } catch (error) {
+    console.error("Favorites Add Error:", error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// Get Favorites Endpoint
+app.get('/api/favorites', async (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  try {
+    const snapshot = await firestore.collection('favorites')
+      .where('user_id', '==', userId)
+      .orderBy('timestamp', 'desc')
+      .get();
+    const favorites = [];
+    snapshot.forEach(doc => favorites.push({ id: doc.id, ...doc.data() }));
+    res.json(favorites);
+  } catch (error) {
+    console.error("Favorites Get Error:", error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// Remove Favorite Endpoint
+app.delete('/api/favorites/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await firestore.collection('favorites').doc(id).delete();
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Favorites Delete Error:", error.message);
     res.status(500).json({ error: "Database error" });
   }
 });
