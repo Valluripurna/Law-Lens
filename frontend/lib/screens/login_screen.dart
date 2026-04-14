@@ -102,9 +102,18 @@ class _LoginScreenState extends State<LoginScreen> {
             Fluttertoast.showToast(msg: 'Welcome back!', backgroundColor: const Color(0xFFFAC25A), textColor: Colors.black);
             Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
           } else {
-            // NOT REGISTERED
-            await authServiceInstance.logout();
-            Fluttertoast.showToast(msg: 'Account not found. Please sign up first.', backgroundColor: Colors.blueGrey, textColor: Colors.white);
+            // NOT REGISTERED in Firestore
+            await authServiceInstance.logout(); // Wipe Firebase Auth session
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.clear(); // Wipe SharedPreferences
+            if (!mounted) return;
+            Fluttertoast.showToast(
+              msg: 'Signup Required: No Law Lens account found for this Google ID.', 
+              backgroundColor: Colors.blueGrey, 
+              textColor: Colors.white,
+              gravity: ToastGravity.CENTER
+            );
+            setState(() => _isLogin = false); // Guide them to Signup tab
           }
         } else {
           // SIGNUP MODE

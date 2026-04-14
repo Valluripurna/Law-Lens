@@ -51,11 +51,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       String? userId = prefs.getString('userId');
       if (userId == null) throw Exception("User ID not found");
 
-      // 1. Upload to Firebase Storage
+      // 1. Reference & Task
       Reference ref = FirebaseStorage.instance.ref().child('profiles').child('$userId.jpg');
-      await ref.putFile(File(image.path));
       
-      // 2. Get Download URL
+      // Monitor the upload task
+      UploadTask uploadTask = ref.putFile(
+        File(image.path),
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      // Wait for completion with state monitoring
+      await uploadTask.whenComplete(() => debugPrint("Upload Task Complete"));
+      
+      // 2. Get Download URL with a small retry-delay (helps if rules/storage are slow)
+      await Future.delayed(const Duration(milliseconds: 800));
       String downloadUrl = await ref.getDownloadURL();
 
       // 3. Update Firestore & Local Storage
@@ -65,11 +74,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _photoUrl = downloadUrl;
       });
       
-      Fluttertoast.showToast(msg: "Profile picture updated!");
+      Fluttertoast.showToast(msg: "Profile picture updated! ✨");
     } catch (e) {
-      Fluttertoast.showToast(msg: "Upload failed: $e", backgroundColor: Colors.redAccent);
+      String errMsg = e.toString();
+      if (errMsg.contains('object-not-found')) {
+        errMsg = "Storage Error: File was not found after upload. Check your Storage Rules.";
+      } else if (errMsg.contains('unauthorized')) {
+        errMsg = "Permission Denied: Ensure your Storage Rules allow access to 'profiles/'.";
+      }
+      Fluttertoast.showToast(msg: "Upload failed: $errMsg", backgroundColor: Colors.redAccent, textColor: Colors.white, gravity: ToastGravity.BOTTOM);
+      debugPrint("Profile Upload Error: $e");
     } finally {
-      setState(() => _isUploading = false);
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
     }
   }
 

@@ -34,16 +34,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/api/history?userId=$_userId'));
+      final response = await http.get(Uri.parse('$_baseUrl/api/history?userId=$_userId')).timeout(const Duration(seconds: 40));
       if (response.statusCode == 200) {
         setState(() {
           _history = json.decode(response.body);
-          _isLoading = false;
         });
+      } else {
+        Fluttertoast.showToast(msg: "History unavailable (${response.statusCode})");
       }
     } catch (e) {
       debugPrint("History Load Error: $e");
-      setState(() => _isLoading = false);
+      Fluttertoast.showToast(msg: "Failed to load history. Try again later.");
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

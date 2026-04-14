@@ -87,6 +87,31 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     if (_userId != null) {
       await _fetchHistory();
+      await _fetchFavorites();
+    }
+  }
+
+  Future<void> _fetchFavorites() async {
+    if (_userId == null) return;
+    try {
+      final response = await http
+          .get(Uri.parse('$_baseUrl/api/favorites?userId=$_userId'))
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        final List<dynamic> favData = json.decode(response.body);
+        final Set<String> favAnswers = favData.map((e) => e['answer'].toString()).toSet();
+        
+        setState(() {
+          _favoritedIndices.clear();
+          for (int i = 0; i < _messages.length; i++) {
+            if (!_messages[i].isUser && favAnswers.contains(_messages[i].text)) {
+              _favoritedIndices.add(i);
+            }
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching favorites for sync: $e");
     }
   }
 
@@ -283,50 +308,56 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Future<void> _addToFavorites(int index) async {
-    String responseText = _messages[index].text;
-    String question = index > 0 && _messages[index-1].isUser ? _messages[index-1].text : "Saved Response";
-    
+  Future<void> _toggleFavorite(int index) async {
     if (_userId == null || _userId!.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Cloud Error: You must be logged in to save favorites."),
-          backgroundColor: Colors.redAccent,
-        ));
-      }
+      Fluttertoast.showToast(msg: "Please log in to save favorites.");
       return;
     }
 
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/favorites'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'userId': _userId,
-          'question': question,
-          'answer': responseText,
-        }),
-      ).timeout(const Duration(seconds: 15));
+    bool isCurrentlyFavorited = _favoritedIndices.contains(index);
+    String responseText = _messages[index].text;
 
-      if (response.statusCode == 200) {
-        if (mounted) {
-          setState(() {
-            _favoritedIndices.add(index);
-          });
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Cloud Synced: Added to Favorites! 💖"),
-            backgroundColor: Colors.green,
-          ));
+    if (isCurrentlyFavorited) {
+      // UNFAVORITE LOGIC
+      try {
+        // 1. Find the favorite ID from the server
+        final getResponse = await http.get(Uri.parse('$_baseUrl/api/favorites?userId=$_userId'));
+        if (getResponse.statusCode == 200) {
+          final List<dynamic> favs = json.decode(getResponse.body);
+          final match = favs.firstWhere((f) => f['answer'] == responseText, orElse: () => null);
+          
+          if (match != null) {
+            String favId = match['id'];
+            final delResponse = await http.delete(Uri.parse('$_baseUrl/api/favorites/$favId'));
+            if (delResponse.statusCode == 200) {
+              setState(() => _favoritedIndices.remove(index));
+              Fluttertoast.showToast(msg: "Removed from Favorites 🤍");
+            }
+          }
         }
-      } else {
-        throw Exception("Failed to sync to cloud.");
+      } catch (e) {
+        debugPrint("Unfavorite Error: $e");
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Could not save favorite to cloud: $e"),
-          backgroundColor: Colors.orange,
-        ));
+    } else {
+      // FAVORITE LOGIC
+      String question = index > 0 && _messages[index-1].isUser ? _messages[index-1].text : "Saved Response";
+      try {
+        final response = await http.post(
+          Uri.parse('$_baseUrl/api/favorites'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'userId': _userId,
+            'question': question,
+            'answer': responseText,
+          }),
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          setState(() => _favoritedIndices.add(index));
+          Fluttertoast.showToast(msg: "Added to Favorites 💖");
+        }
+      } catch (e) {
+        Fluttertoast.showToast(msg: "Failed to save to cloud.");
       }
     }
   }
@@ -504,12 +535,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                 padding: const EdgeInsets.only(right: 16),
                               ),
                               IconButton(
-                                icon: Icon(
-                                  _favoritedIndices.contains(index) ? Icons.favorite : Icons.favorite_border, 
-                                  size: 20, 
-                                  color: Colors.redAccent
-                                ),
-                                onPressed: _favoritedIndices.contains(index) ? null : () => _addToFavorites(index),
+                                  icon: Icon(
+                                    _favoritedIndices.contains(index) ? Icons.favorite : Icons.favorite_border, 
+                                    size: 20, 
+                                    color: Colors.redAccent
+                                  ),
+                                  onPressed: () => _toggleFavorite(index),
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                               ),
