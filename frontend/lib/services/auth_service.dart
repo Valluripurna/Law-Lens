@@ -41,11 +41,11 @@ class AuthService {
     }
   }
 
-  Future<Map<String, dynamic>> signup(String email, String password) async {
+  Future<Map<String, dynamic>> signup(String email, String password, {String? photoUrl}) async {
     try {
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-      await registerUserInFirestore(email, userCredential.user?.uid ?? '');
-      await _saveAuthData(userCredential.user?.uid ?? '', email);
+      await registerUserInFirestore(email, userCredential.user?.uid ?? '', photoUrl: photoUrl);
+      await _saveAuthData(userCredential.user?.uid ?? '', email, photoUrl: photoUrl);
       return {'success': true, 'data': userCredential.user?.uid};
     } on FirebaseAuthException catch (e) {
       return {'success': false, 'error': e.message};

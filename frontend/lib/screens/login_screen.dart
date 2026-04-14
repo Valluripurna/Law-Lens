@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isLogin = true;
   bool _isAgreed = false;
+  String _selectedGender = "Male"; // Default gender selection
 
   Future<void> _submitNormal() async {
     final email = _emailController.text.trim();
@@ -43,7 +44,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (_isLogin) {
         result = await authServiceInstance.login(email, password);
       } else {
-        result = await authServiceInstance.signup(email, password);
+        String photoUrl = _selectedGender == "Male"
+            ? "https://avatar.iran.liara.run/public/boy"
+            : "https://avatar.iran.liara.run/public/girl";
+            
+        result = await authServiceInstance.signup(email, password, photoUrl: photoUrl);
       }
 
       if (!mounted) return;
@@ -217,8 +222,50 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text('Forgot password?', style: TextStyle(color: accentGold, fontSize: 13)),
                     ),
                   )
-                else
+                else ...[
+                  const SizedBox(height: 24),
+                  const Text(
+                    "Select Gender",
+                    style: TextStyle(color: navyText, fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Center(child: Text("Male")),
+                          selected: _selectedGender == "Male",
+                          onSelected: (v) => setState(() => _selectedGender = "Male"),
+                          selectedColor: accentGold,
+                          backgroundColor: fieldBg,
+                          labelStyle: TextStyle(
+                            color: _selectedGender == "Male" ? navyText : Colors.blueGrey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          showCheckmark: false,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Center(child: Text("Female")),
+                          selected: _selectedGender == "Female",
+                          onSelected: (v) => setState(() => _selectedGender = "Female"),
+                          selectedColor: accentGold,
+                          backgroundColor: fieldBg,
+                          labelStyle: TextStyle(
+                            color: _selectedGender == "Female" ? navyText : Colors.blueGrey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          showCheckmark: false,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
+                ],
 
                 if (!_isLogin) 
                   Row(
