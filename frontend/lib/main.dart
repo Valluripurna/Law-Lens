@@ -205,7 +205,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             .get();
 
         if (userDoc.exists) {
-          final userData = userDoc.data() as Map<String, dynamic>?;
+          final userData = userDoc.data();
           if (userData != null) {
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString('userId', firebaseUser.uid);
