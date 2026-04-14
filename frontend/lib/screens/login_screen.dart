@@ -78,6 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result['success']) {
         final String email = result['email'];
         final String uid = result['uid'];
+        final String? photoUrl = result['photoUrl'];
         
         bool exists = await authServiceInstance.userExists(email);
 
@@ -93,6 +94,9 @@ class _LoginScreenState extends State<LoginScreen> {
             await prefs.setString('jwt_token', uid);
             await prefs.setString('userId', uid);
             await prefs.setString('userEmail', email);
+            if (photoUrl != null) {
+              await prefs.setString('userPhotoUrl', photoUrl);
+            }
 
             if (!mounted) return;
             Fluttertoast.showToast(msg: 'Welcome back!', backgroundColor: const Color(0xFFFAC25A), textColor: Colors.black);
@@ -108,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Fluttertoast.showToast(msg: 'Account already exists. Please Sign In.', backgroundColor: Colors.blueGrey);
             setState(() => _isLogin = true);
           } else {
-            await authServiceInstance.registerUserInFirestore(email, uid);
+            await authServiceInstance.registerUserInFirestore(email, uid, photoUrl: photoUrl);
             await authServiceInstance.logout(); // Force them to sign in
             Fluttertoast.showToast(msg: 'Account created! Please Sign In now.', backgroundColor: Colors.green);
             setState(() => _isLogin = true);

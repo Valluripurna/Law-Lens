@@ -17,12 +17,13 @@ class AuthService {
     }
   }
 
-  Future<void> registerUserInFirestore(String email, String uid) async {
+  Future<void> registerUserInFirestore(String email, String uid, {String? photoUrl}) async {
     await _firestore.collection('users').doc(email).set({
       'email': email,
       'uid': uid,
+      'photoUrl': photoUrl,
       'createdAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -71,6 +72,7 @@ class AuthService {
          'success': true, 
          'uid': userCredential.user?.uid, 
          'email': userCredential.user?.email,
+         'photoUrl': googleUser.photoUrl,
          'credential': userCredential
        };
      } catch (e) {
@@ -78,11 +80,22 @@ class AuthService {
      }
   }
 
-  Future<void> _saveAuthData(String uid, String email) async {
+  Future<void> updateProfilePicture(String email, String photoUrl) async {
+    await _firestore.collection('users').doc(email).update({
+      'photoUrl': photoUrl,
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('userPhotoUrl', photoUrl);
+  }
+
+  Future<void> _saveAuthData(String uid, String email, {String? photoUrl}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('jwt_token', uid); 
-    await prefs.setString('userUid', uid);
+    await prefs.setString('userId', uid);
     await prefs.setString('userEmail', email);
+    if (photoUrl != null) {
+      await prefs.setString('userPhotoUrl', photoUrl);
+    }
   }
 
   Future<void> logout() async {
@@ -90,8 +103,9 @@ class AuthService {
     await _googleSignIn.signOut();
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
-    await prefs.remove('userUid');
+    await prefs.remove('userId');
     await prefs.remove('userEmail');
+    await prefs.remove('userPhotoUrl');
   }
 
   Future<bool> isLoggedIn() async {

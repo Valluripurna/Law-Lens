@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
@@ -17,6 +20,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String _email = "";
   String _language = "English";
+  String? _photoUrl;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -29,7 +34,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _email = prefs.getString('userEmail') ?? "User";
       _language = prefs.getString('language') ?? "English";
+      _photoUrl = prefs.getString('userPhotoUrl');
     });
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+    
+    if (image == null) return;
+
+    setState(() => _isUploading = true);
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? userId = prefs.getString('userId');
+      if (userId == null) throw Exception("User ID not found");
+
+      // 1. Upload to Firebase Storage
+      Reference ref = FirebaseStorage.instance.ref().child('profiles').child('$userId.jpg');
+      await ref.putFile(File(image.path));
+      
+      // 2. Get Download URL
+      String downloadUrl = await ref.getDownloadURL();
+
+      // 3. Update Firestore & Local Storage
+      await AuthService().updateProfilePicture(_email, downloadUrl);
+
+      setState(() {
+        _photoUrl = downloadUrl;
+      });
+      
+      Fluttertoast.showToast(msg: "Profile picture updated!");
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Upload failed: $e", backgroundColor: Colors.redAccent);
+    } finally {
+      setState(() => _isUploading = false);
+    }
   }
 
   void _logout(BuildContext context) async {
@@ -47,10 +88,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
-        CircleAvatar(
-          radius: 50,
-          backgroundColor: Colors.blueAccent.withAlpha(51),
-          child: const Icon(Icons.person, size: 50, color: Colors.blueAccent),
+        Center(
+          child: Stack(
+            children: [
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: Colors.blueAccent.withAlpha(51),
+                backgroundImage: _photoUrl != null && _photoUrl!.isNotEmpty
+                  ? NetworkImage(_photoUrl!)
+                  : null,
+                child: _photoUrl == null || _photoUrl!.isEmpty
+                    ? const Icon(Icons.person, size: 60, color: Colors.blueAccent)
+                    : null,
+              ),
+              if (_isUploading)
+                const Positioned.fill(
+                  child: Center(child: CircularProgressIndicator(color: Colors.white)),
+                ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onTap: _pickAndUploadImage,
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Theme.of(context).primaryColor,
+                    child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         Text(

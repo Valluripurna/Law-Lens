@@ -205,10 +205,21 @@ class _AuthWrapperState extends State<AuthWrapper> {
             .get();
 
         if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>?;
+          if (userData != null) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('userId', firebaseUser.uid);
+            await prefs.setString('userEmail', firebaseUser.email!);
+            if (userData['photoUrl'] != null) {
+              await prefs.setString('userPhotoUrl', userData['photoUrl']);
+            }
+          }
           isLoggedIn = true;
         } else {
           // Account deleted from database by Admin
           await FirebaseAuth.instance.signOut();
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.clear(); // Wipe everything on forced logout
           isLoggedIn = false;
         }
       } catch (e) {

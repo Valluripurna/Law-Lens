@@ -51,6 +51,7 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_markdown_plus: ^1.0.7
   syncfusion_flutter_pdf: ^33.1.47
+  firebase_storage: ^13.2.0
 
 dev_dependencies:
   flutter_test:
