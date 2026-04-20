@@ -52,6 +52,9 @@ dependencies:
   flutter_markdown_plus: ^1.0.7
   syncfusion_flutter_pdf: ^33.1.47
   flutter_tts: ^4.2.2
+  flutter_map: ^8.3.0
+  latlong2: ^0.9.1
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:

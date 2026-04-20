@@ -3,6 +3,7 @@ import 'chat_screen.dart';
 import 'profile_screen.dart';
 import 'history_screen.dart';
 import 'favorites_screen.dart';
+import 'zone_status_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _pages = [
       const ChatScreen(),
       FavoritesScreen(key: _favoritesKey),
+      const ZoneStatusScreen(),
       HistoryScreen(key: _historyKey),
       const ProfileScreen(),
     ];
@@ -51,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (index) {
           setState(() => _currentIndex = index);
           if (index == 1) _favoritesKey.currentState?.loadFavorites();
-          if (index == 2) _historyKey.currentState?.loadHistory();
+          if (index == 3) _historyKey.currentState?.loadHistory();
         },
         type: BottomNavigationBarType.fixed, // Essential for 4+ items
         selectedItemColor: const Color(0xFFD4AF37),
@@ -59,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
           BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favorites'),
+          BottomNavigationBarItem(icon: Icon(Icons.radar), label: 'Zone'),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

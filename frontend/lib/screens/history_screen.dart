@@ -61,7 +61,7 @@ class HistoryScreenState extends State<HistoryScreen> {
     });
 
     try {
-      await http.delete(Uri.parse('$_baseUrl/api/history/$historyId'));
+      await http.delete(Uri.parse('$_baseUrl/api/history/$historyId?userId=$_userId'));
       Fluttertoast.showToast(msg: "History record deleted", backgroundColor: Colors.redAccent);
     } catch (e) {
       debugPrint("Error deleting history: $e");

@@ -19,6 +19,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _email = "";
   String _language = "English";
   String? _photoUrl;
+  bool _receiveZoneAlerts = true;
 
   @override
   void initState() {
@@ -32,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _email = prefs.getString('userEmail') ?? "User";
       _language = prefs.getString('language') ?? "English";
       _photoUrl = prefs.getString('userPhotoUrl');
+      _receiveZoneAlerts = prefs.getBool('zoneAlerts') ?? true;
     });
   }
 
@@ -107,6 +109,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   await prefs.setString('language', val);
                   Fluttertoast.showToast(msg: "Language changed to $val");
                 }
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.radar, color: Colors.blueAccent),
+            title: const Text('Receive Zone Alerts'),
+            subtitle: const Text('Notify me near checkposts & hotspots', style: TextStyle(fontSize: 12)),
+            trailing: Switch(
+              value: _receiveZoneAlerts,
+              activeColor: Colors.blueAccent,
+              onChanged: (val) async {
+                setState(() => _receiveZoneAlerts = val);
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('zoneAlerts', val);
+                Fluttertoast.showToast(msg: val ? "Zone Alerts ON" : "Zone Alerts OFF");
               },
             ),
           ),

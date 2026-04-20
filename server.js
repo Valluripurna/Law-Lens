@@ -130,7 +130,7 @@ const saveChatHistory = async (userId, question, answer, useVanishMode) => {
   }
   try {
     console.log(`[History] Saving chat for user: ${userId}`);
-    await firestore.collection('chats').add({
+    await firestore.collection('users').doc(userId).collection('chats').add({
       user_id: userId,
       question: question,
       answer: answer,
@@ -288,8 +288,7 @@ app.get('/api/history', async (req, res) => {
   if (!userId) return res.status(400).json({ error: "Missing userId" });
 
   try {
-    const snapshot = await firestore.collection('chats')
-      .where('user_id', '==', userId)
+    const snapshot = await firestore.collection('users').doc(userId).collection('chats')
       .orderBy('timestamp', 'desc')
       .limit(20)
       .get();
@@ -306,8 +305,10 @@ app.get('/api/history', async (req, res) => {
 // Delete History Endpoint
 app.delete('/api/history/:id', async (req, res) => {
   const { id } = req.params;
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
   try {
-    await firestore.collection('chats').doc(id).delete();
+    await firestore.collection('users').doc(userId).collection('chats').doc(id).delete();
     res.json({ success: true });
   } catch (error) {
     console.error("History Delete Error:", error.message);
@@ -320,7 +321,7 @@ app.post('/api/favorites', async (req, res) => {
   const { userId, question, answer } = req.body;
   if (!userId || !question || !answer) return res.status(400).json({ error: "Missing required fields" });
   try {
-    const docRef = await firestore.collection('favorites').add({
+    const docRef = await firestore.collection('users').doc(userId).collection('favorites').add({
       user_id: userId,
       question: question,
       answer: answer,
@@ -338,8 +339,7 @@ app.get('/api/favorites', async (req, res) => {
   const { userId } = req.query;
   if (!userId) return res.status(400).json({ error: "Missing userId" });
   try {
-    const snapshot = await firestore.collection('favorites')
-      .where('user_id', '==', userId)
+    const snapshot = await firestore.collection('users').doc(userId).collection('favorites')
       .orderBy('timestamp', 'desc')
       .get();
     const favorites = [];
@@ -354,8 +354,10 @@ app.get('/api/favorites', async (req, res) => {
 // Remove Favorite Endpoint
 app.delete('/api/favorites/:id', async (req, res) => {
   const { id } = req.params;
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
   try {
-    await firestore.collection('favorites').doc(id).delete();
+    await firestore.collection('users').doc(userId).collection('favorites').doc(id).delete();
     res.json({ success: true });
   } catch (error) {
     console.error("Favorites Delete Error:", error.message);

@@ -399,7 +399,7 @@ class _ChatScreenState extends State<ChatScreen> {
           
           if (match != null) {
             String favId = match['id'];
-            final delResponse = await http.delete(Uri.parse('$_baseUrl/api/favorites/$favId'));
+            final delResponse = await http.delete(Uri.parse('$_baseUrl/api/favorites/$favId?userId=$_userId'));
             if (delResponse.statusCode == 200) {
               Fluttertoast.showToast(msg: "Removed from Favorites 🤍");
               return;

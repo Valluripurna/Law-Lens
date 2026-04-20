@@ -44,12 +44,16 @@ class FavoritesScreenState extends State<FavoritesScreen> {
     final item = _favorites[index];
     final String favoriteId = item['id'];
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? userId = prefs.getString('userId');
+
     setState(() {
       _favorites.removeAt(index);
     });
 
     try {
-      await http.delete(Uri.parse('$_baseUrl/api/favorites/$favoriteId'));
+      if (userId == null) return;
+      await http.delete(Uri.parse('$_baseUrl/api/favorites/$favoriteId?userId=$userId'));
       Fluttertoast.showToast(msg: "Removed from favorites", backgroundColor: Colors.redAccent);
     } catch (e) {
       debugPrint("Error deleting favorite: $e");
