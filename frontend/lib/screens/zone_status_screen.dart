@@ -50,7 +50,7 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
     } 
 
     try {
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+      Position position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.best));
       if (!mounted) return;
       setState(() {
         _currentPosition = LatLng(position.latitude, position.longitude);

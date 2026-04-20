@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 
 import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
@@ -121,7 +120,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             subtitle: const Text('Notify me near checkposts & hotspots', style: TextStyle(fontSize: 12)),
             trailing: Switch(
               value: _receiveZoneAlerts,
-              activeColor: Colors.blueAccent,
+              activeThumbColor: Colors.white,
+              activeTrackColor: Colors.blueAccent,
               onChanged: (val) async {
                 setState(() => _receiveZoneAlerts = val);
                 SharedPreferences prefs = await SharedPreferences.getInstance();
