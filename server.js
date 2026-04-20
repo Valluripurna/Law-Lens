@@ -124,17 +124,21 @@ const findRelevantLawsFirestore = async (query) => {
 
 // Firestore Save Chat Helper
 const saveChatHistory = async (userId, question, answer, useVanishMode) => {
-  if (!useVanishMode && userId) {
-    try {
-      await firestore.collection('chats').add({
-        user_id: userId,
-        question: question,
-        answer: answer,
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-      });
-    } catch (error) {
-      console.error("Error saving chat:", error.message);
-    }
+  if (useVanishMode || !userId) {
+    console.log(`[History] Skipping save (Vanish: ${useVanishMode}, UserID: ${userId})`);
+    return;
+  }
+  try {
+    console.log(`[History] Saving chat for user: ${userId}`);
+    await firestore.collection('chats').add({
+      user_id: userId,
+      question: question,
+      answer: answer,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+    console.log(`[History] Save successful.`);
+  } catch (error) {
+    console.error(`[History] Save FAILED for ${userId}:`, error.message);
   }
 };
 
@@ -219,12 +223,12 @@ Answer:`;
 
     console.log(`[Groq] Streaming finish in ${Date.now() - aiStart}ms`);
     
+    // 3. Save History - CRITICAL: Actually await this or handle carefully
+    await saveChatHistory(userId, question, answerText, useVanishMode);
+    
     // Complete the transaction manually
     res.write(`data: [DONE]\n\n`);
     res.end();
-
-    // 3. Save History asynchronously
-    saveChatHistory(userId, question, answerText, useVanishMode);
     
   } catch (error) {
     console.error("[API] Error:", error.message);

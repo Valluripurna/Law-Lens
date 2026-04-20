@@ -9,6 +9,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
@@ -23,6 +24,8 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _carouselController = ScrollController();
+  final ScrollController _chatScrollController = ScrollController();
+  final FlutterTts _flutterTts = FlutterTts();
   final List<Message> _messages = [];
   List<Message> _normalChatCache = [];
   final Set<int> _favoritedIndices = {};
@@ -42,7 +45,17 @@ class _ChatScreenState extends State<ChatScreen> {
     "Punishment for murder?",
     "Bail procedure?",
     "Drunk driving laws?",
-    "Police arrest rights"
+    "Police arrest rights",
+    "Section 144 meaning",
+    "Cyber crime report",
+    "Divorce laws india",
+    "RTI application",
+    "Consumer court help",
+    "Tenant rights",
+    "Property registration",
+    "Legal aid for poor",
+    "Dowry laws",
+    "POCSO act basics"
   ];
 
   // BACKEND URL - Updated for Render
@@ -75,8 +88,28 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _carouselTimer?.cancel();
     _carouselController.dispose();
+    _chatScrollController.dispose();
     _messageController.dispose();
+    _flutterTts.stop();
     super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.setLanguage("en-IN");
+    await _flutterTts.setPitch(1.0);
+    await _flutterTts.speak(text);
   }
 
   Future<void> _loadUserAndHistory() async {
@@ -158,6 +191,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(Message(text: uiText, isUser: true));
       _isLoading = true;
     });
+    _scrollToBottom();
 
     try {
       if (_attachedImagePath != null) {
@@ -177,6 +211,7 @@ class _ChatScreenState extends State<ChatScreen> {
           _messages.add(Message(text: jsonRes['answer'] ?? "Could not analyze image.", isUser: false));
           _isLoading = false;
         });
+        _scrollToBottom();
         _attachedImagePath = null;
         _attachedPdfText = null;
         _attachedPdfName = null;
@@ -223,6 +258,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         _messages.last = Message(text: lastMsg.text + jsonData['chunk'], isUser: false, isStreaming: true);
                       }
                     });
+                    _scrollToBottom();
                  } else if (jsonData['error'] != null) {
                     _showError(jsonData['error']);
                  }
@@ -266,7 +302,7 @@ class _ChatScreenState extends State<ChatScreen> {
         document.dispose();
         
         setState(() {
-          _attachedPdfText = text;
+          _attachedPdfText = text.length > 5000 ? text.substring(0, 5000) : text;
           _attachedPdfName = result.files.single.name;
           _attachedImagePath = null;
         });
@@ -469,6 +505,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         Expanded(
           child: ListView.builder(
+            controller: _chatScrollController,
             padding: const EdgeInsets.all(16.0),
             itemCount: _messages.length,
             itemBuilder: (context, index) {
@@ -541,6 +578,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                     color: Colors.redAccent
                                   ),
                                   onPressed: () => _toggleFavorite(index),
+                                constraints: const BoxConstraints(),
+                                padding: const EdgeInsets.only(right: 16),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.volume_up, size: 20, color: Colors.green),
+                                onPressed: () => _speak(msg.text),
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                               ),
