@@ -21,7 +21,6 @@ frontend/.packages
 frontend/generated_plugin_registrant.dart
 frontend/android/.gradle
 frontend/android/local.properties
-frontend/android/app/google-services.json
 frontend/ios/Flutter/Generated.xcconfig
 frontend/ios/Flutter/flutter_export_environment.sh
 frontend/ios/ServiceAccount.json

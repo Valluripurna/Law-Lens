@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1032660273237",
+    "project_id": "law-lens-3e24a",
+    "storage_bucket": "law-lens-3e24a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1032660273237:android:f107c1d82ff294c8c96cdc",
+        "android_client_info": {
+          "package_name": "com.example.law_lens"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1032660273237-vus8avcvo4jl2n7qet0sjraf8afejkpv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6r86QVcF5Rh37n2Yo2TvXFB-F-9NO6f4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1032660273237-vus8avcvo4jl2n7qet0sjraf8afejkpv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
