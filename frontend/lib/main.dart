@@ -17,9 +17,18 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await NotificationService.initialize();
-  await NotificationService.scheduleDailyReminder();
-  await GoogleSignIn.instance.initialize();
+  try {
+    await NotificationService.initialize();
+    await NotificationService.scheduleDailyReminder();
+  } catch (e) {
+    debugPrint("Failed to initialize notifications: $e");
+  }
+  
+  try {
+    await GoogleSignIn.instance.initialize();
+  } catch (e) {
+    debugPrint("Failed to initialize Google SignIn: $e");
+  }
   
   runApp(
     MultiProvider(
