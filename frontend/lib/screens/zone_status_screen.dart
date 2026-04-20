@@ -3,6 +3,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'dart:async';
+import '../services/notification_service.dart';
 
 class ZoneStatusScreen extends StatefulWidget {
   const ZoneStatusScreen({super.key});
@@ -15,6 +17,14 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
   LatLng? _currentPosition;
   bool _isLoading = true;
   final MapController _mapController = MapController();
+  StreamSubscription<Position>? _positionStream;
+  LatLng? _lastAlertPosition;
+  
+  @override
+  void dispose() {
+    _positionStream?.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -50,13 +60,39 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
     } 
 
     try {
-      Position position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.best));
+      Position initialPosition = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.best));
       if (!mounted) return;
       setState(() {
-        _currentPosition = LatLng(position.latitude, position.longitude);
+        _currentPosition = LatLng(initialPosition.latitude, initialPosition.longitude);
+        _lastAlertPosition = _currentPosition;
         _isLoading = false;
       });
       _mapController.move(_currentPosition!, 14.0);
+
+      _positionStream = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          distanceFilter: 10,
+        ),
+      ).listen((Position position) {
+        if (!mounted) return;
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+        });
+
+        if (_lastAlertPosition != null) {
+          final double distance = const Distance().as(
+            LengthUnit.Meter,
+            _lastAlertPosition!,
+            _currentPosition!,
+          );
+          
+          if (distance >= 1000) { // 1km moved
+            _lastAlertPosition = _currentPosition;
+            NotificationService.showZoneAlert();
+          }
+        }
+      });
     } catch (e) {
       Fluttertoast.showToast(msg: 'Error getting location.');
       if (mounted) setState(() => _isLoading = false);
@@ -159,6 +195,29 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
             ],
           ),
         ],
+      ),
+      floatingActionButton: _buildLegendCard(),
+    );
+  }
+
+  Widget _buildLegendCard() {
+    return Card(
+      elevation: 6,
+      color: Colors.white.withAlpha(240),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+             const Text("Zone Legend", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E2A38))),
+             const SizedBox(height: 8),
+             Row(mainAxisSize: MainAxisSize.min, children: const [Icon(Icons.local_police, color: Colors.redAccent, size: 16), SizedBox(width: 8), Text("Police Checkpost", style: TextStyle(fontSize: 12))]),
+             const SizedBox(height: 4),
+             Row(mainAxisSize: MainAxisSize.min, children: const [Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 16), SizedBox(width: 8), Text("High Risk Area", style: TextStyle(fontSize: 12))]),
+          ],
+        ),
       ),
     );
   }

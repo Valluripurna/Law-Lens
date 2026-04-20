@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import '../utils/pdf_generator.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -170,6 +171,12 @@ class FavoritesScreenState extends State<FavoritesScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        TextButton.icon(
+                          onPressed: () => PdfGenerator.generateAndSharePDF(question, answer, formattedDate),
+                          icon: const Icon(Icons.picture_as_pdf, size: 18),
+                          label: const Text("Export PDF", style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                        ),
                         TextButton.icon(
                           onPressed: () {
                              showModalBottomSheet(

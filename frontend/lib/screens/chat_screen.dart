@@ -106,14 +106,19 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool isStreaming = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_chatScrollController.hasClients) {
-        _chatScrollController.animateTo(
-          _chatScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (isStreaming) {
+           // Simulate a smooth typewriter tracking effect by locking position tightly to the bottom
+           _chatScrollController.jumpTo(_chatScrollController.position.maxScrollExtent);
+        } else {
+           _chatScrollController.animateTo(
+             _chatScrollController.position.maxScrollExtent,
+             duration: const Duration(milliseconds: 300),
+             curve: Curves.easeOut,
+           );
+        }
       }
     });
   }
@@ -285,7 +290,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         _messages.last = Message(text: lastMsg.text + jsonData['chunk'], isUser: false, isStreaming: true);
                       }
                     });
-                    _scrollToBottom();
+                    _scrollToBottom(isStreaming: true);
                  } else if (jsonData['error'] != null) {
                     _showError(jsonData['error']);
                  }

@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import '../utils/pdf_generator.dart';
+import '../utils/pdf_generator.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -122,6 +124,21 @@ class HistoryScreenState extends State<HistoryScreen> {
                     const Text("AI Response:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
                     const SizedBox(height: 8),
                     Text(item['answer'] ?? "No response available."),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () {
+                           String formattedDate = item['timestamp'] != null 
+                              ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(item['timestamp']['_seconds'] != null ? DateTime.fromMillisecondsSinceEpoch(item['timestamp']['_seconds'] * 1000).toIso8601String() : DateTime.now().toIso8601String()))
+                              : "Recent";
+                           PdfGenerator.generateAndSharePDF(item['question'], item['answer'], formattedDate);
+                        },
+                        icon: const Icon(Icons.picture_as_pdf, color: Colors.redAccent),
+                        label: const Text("Download PDF"),
+                        style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                      ),
+                    ),
                   ],
                 ),
               )
