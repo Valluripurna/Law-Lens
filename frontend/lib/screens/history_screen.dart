@@ -5,7 +5,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import '../utils/pdf_generator.dart';
-import '../utils/pdf_generator.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});

@@ -69,7 +69,10 @@ class PdfGenerator {
       await file.writeAsBytes(bytes, flush: true);
 
       // Trigger Share / Local Save Dialog
-      await SharePlus.instance.shareXFiles([XFile(path)], text: 'Here is your official legal breakdown from Law Lens.');
+      await SharePlus.instance.share(ShareParams(
+          files: [XFile(path)], 
+          text: 'Here is your official legal breakdown from Law Lens.'
+      ));
 
     } catch (e) {
       debugPrint("Error generating PDF: $e");

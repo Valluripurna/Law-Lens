@@ -1,6 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/material.dart';
 
 class NotificationService {
@@ -20,7 +19,9 @@ class NotificationService {
     // Request permissions for Android 13+
     await _notificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
 
-    await _notificationsPlugin.initialize(initializationSettings);
+    await _notificationsPlugin.initialize(
+      settings: initializationSettings,
+    );
   }
 
   static Future<void> showZoneAlert() async {
@@ -37,10 +38,10 @@ class NotificationService {
     const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
     
     await _notificationsPlugin.show(
-      0,
-      'Live Map Tracker 🗺️',
-      'You have moved 1km into a new area. Stay alert for checkposts!',
-      notificationDetails,
+      id: 0,
+      title: 'Live Map Tracker 🗺️',
+      body: 'You have moved 1km into a new area. Stay alert for checkposts!',
+      notificationDetails: notificationDetails,
     );
   }
 
@@ -59,11 +60,11 @@ class NotificationService {
 
     // Schedule to appear every day at the same time
     await _notificationsPlugin.periodicallyShow(
-      1,
-      'Law Lens AI is Ready ⚖️',
-      'Have any traffic or legal questions today? Check them now.',
-      RepeatInterval.daily,
-      notificationDetails,
+      id: 1,
+      title: 'Law Lens AI is Ready ⚖️',
+      body: 'Have any traffic or legal questions today? Check them now.',
+      repeatInterval: RepeatInterval.daily,
+      notificationDetails: notificationDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
