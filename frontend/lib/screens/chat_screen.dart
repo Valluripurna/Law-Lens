@@ -30,6 +30,9 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Message> _normalChatCache = [];
   final Set<int> _favoritedIndices = {};
   
+  int? _playingIndex;
+  bool _isPlaying = false;
+  
   bool _isLoading = false;
   bool _vanishMode = false;
   String? _userId;
@@ -66,6 +69,15 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     _loadUserAndHistory();
     _startCarousel();
+    
+    _flutterTts.setCompletionHandler(() {
+      if (mounted) {
+        setState(() {
+          _playingIndex = null;
+          _isPlaying = false;
+        });
+      }
+    });
   }
 
   void _startCarousel() {
@@ -106,10 +118,25 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  Future<void> _speak(String text) async {
-    await _flutterTts.setLanguage("en-IN");
-    await _flutterTts.setPitch(1.0);
-    await _flutterTts.speak(text);
+  Future<void> _speak(int index, String text) async {
+    if (_playingIndex == index) {
+      if (_isPlaying) {
+        await _flutterTts.pause();
+        setState(() => _isPlaying = false);
+      } else {
+        await _flutterTts.speak(text);
+        setState(() => _isPlaying = true);
+      }
+    } else {
+      await _flutterTts.stop();
+      await _flutterTts.setLanguage("en-IN");
+      await _flutterTts.setPitch(1.0);
+      setState(() {
+        _playingIndex = index;
+        _isPlaying = true;
+      });
+      await _flutterTts.speak(text);
+    }
   }
 
   Future<void> _loadUserAndHistory() async {
@@ -353,10 +380,18 @@ class _ChatScreenState extends State<ChatScreen> {
     bool isCurrentlyFavorited = _favoritedIndices.contains(index);
     String responseText = _messages[index].text;
 
+    // OPTIMISTIC UI: Instantly change the heart state
+    setState(() {
+      if (isCurrentlyFavorited) {
+        _favoritedIndices.remove(index);
+      } else {
+        _favoritedIndices.add(index);
+      }
+    });
+
     if (isCurrentlyFavorited) {
-      // UNFAVORITE LOGIC
+      // API CALL TO UNFAVORITE
       try {
-        // 1. Find the favorite ID from the server
         final getResponse = await http.get(Uri.parse('$_baseUrl/api/favorites?userId=$_userId'));
         if (getResponse.statusCode == 200) {
           final List<dynamic> favs = json.decode(getResponse.body);
@@ -366,16 +401,19 @@ class _ChatScreenState extends State<ChatScreen> {
             String favId = match['id'];
             final delResponse = await http.delete(Uri.parse('$_baseUrl/api/favorites/$favId'));
             if (delResponse.statusCode == 200) {
-              setState(() => _favoritedIndices.remove(index));
               Fluttertoast.showToast(msg: "Removed from Favorites 🤍");
+              return;
             }
           }
         }
+        // Rollback if not found or failed
+        setState(() => _favoritedIndices.add(index));
       } catch (e) {
+        setState(() => _favoritedIndices.add(index));
         debugPrint("Unfavorite Error: $e");
       }
     } else {
-      // FAVORITE LOGIC
+      // API CALL TO FAVORITE
       String question = index > 0 && _messages[index-1].isUser ? _messages[index-1].text : "Saved Response";
       try {
         final response = await http.post(
@@ -389,10 +427,12 @@ class _ChatScreenState extends State<ChatScreen> {
         ).timeout(const Duration(seconds: 15));
 
         if (response.statusCode == 200) {
-          setState(() => _favoritedIndices.add(index));
           Fluttertoast.showToast(msg: "Added to Favorites 💖");
+        } else {
+          setState(() => _favoritedIndices.remove(index));
         }
       } catch (e) {
+        setState(() => _favoritedIndices.remove(index));
         Fluttertoast.showToast(msg: "Failed to save to cloud.");
       }
     }
@@ -582,8 +622,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                 padding: const EdgeInsets.only(right: 16),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.volume_up, size: 20, color: Colors.green),
-                                onPressed: () => _speak(msg.text),
+                                icon: Icon(
+                                  _playingIndex == index && _isPlaying ? Icons.pause_circle_filled : Icons.volume_up, 
+                                  size: 22, 
+                                  color: _playingIndex == index && _isPlaying ? Colors.redAccent : Colors.green
+                                ),
+                                onPressed: () => _speak(index, msg.text),
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                               ),

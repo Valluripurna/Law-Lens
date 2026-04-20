@@ -190,9 +190,12 @@ app.post('/api/chat', async (req, res) => {
     console.log(`[Groq] Requesting response from llama-3.3-70b-versatile...`);
     const aiStart = Date.now();
     
-    const prompt = `You are a legal expert AI for Law Lens. Provide an extremely detailed, exhaustive, and comprehensive legal breakdown for an Indian citizen.
+    const prompt = `You are a legal expert AI for Law Lens.
+CRITICAL RULE: If the User Question is NOT related to Indian Laws, Traffic Rules, Court Procedures, Legal Documents, or formal legal inquiries, you MUST decline to answer and respond EXACTLY with: 'I am Law Lens, an AI Legal Assistant. I can only assist you with matters related to Indian Law, Traffic Rules, and Legal Documents. Please ask a relevant legal query.'
+
 Rules:
-- Provide an extensive legal breakdown with precise clarity. Include multiple paragraphs, exact IPC/BNS sections, penalties, and historical context if applicable.
+- Provide a highly extensive, exhaustive, and comprehensive legal breakdown with precise clarity. Your response should read like a detailed legal brief. Include multiple deep paragraphs, exact IPC/BNS sections, definitions, penalties, procedural steps, and real-world legal context.
+- Accuracy is paramount. Ensure all legal sections referenced are correct under Indian Law.
 - You absolutely MUST formulate practical reference URL web links to authoritative sources (e.g. India Code, Supreme Court Archives, or Ministry Websites) at the bottom of your response to allow the user to read more.
 - Respond strictly in ${language}.
 - Include end disclaimer: "This is general information and not legal advice."
@@ -247,7 +250,7 @@ app.post('/api/upload-image', multer().single('image'), async (req, res) => {
   const { userId, question = "Explain this legally.", language = "English", useVanishMode } = req.body;
 
   try {
-    const prompt = `Analyze this legal document/scene. Question: ${question}. Reply in ${language}.`;
+    const prompt = `CRITICAL RULE: Analyze this legal document/scene. Question: ${question}. If the image or query is NOT remotely related to Indian Laws, Traffic Rules, accidents, fines, or legal documents, you MUST decline and reply exactly with: 'I am Law Lens, an AI Legal Assistant. I can only assist you with matters related to Indian Law, Traffic Rules, and Legal Documents. Please upload a relevant legal document or scene.' Otherwise, reply with an extensive, highly accurate, multi-paragraph legal analysis in ${language}.`;
 
     const base64Image = req.file.buffer.toString("base64");
     const mimeType = req.file.mimetype;
@@ -257,7 +260,7 @@ app.post('/api/upload-image', multer().single('image'), async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "You are an expert Indian Legal Assistant. Analyze the provided image/document with high precision. Provide detailed, clear, and structured legal insights based only on the visual evidence provided."
+          content: "You are an expert Indian Legal Assistant. Analyze the provided image/document with extremely high precision. Provide extensive, clear, and structured legal insights based only on the visual evidence provided. Reject non-legal imagery forcefully."
         },
         {
           role: "user",

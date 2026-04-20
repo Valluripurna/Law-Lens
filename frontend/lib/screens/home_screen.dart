@@ -13,13 +13,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  final GlobalKey<FavoritesScreenState> _favoritesKey = GlobalKey();
+  final GlobalKey<HistoryScreenState> _historyKey = GlobalKey();
 
-  final List<Widget> _pages = [
-    const ChatScreen(),
-    const FavoritesScreen(),
-    const HistoryScreen(),
-    const ProfileScreen(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const ChatScreen(),
+      FavoritesScreen(key: _favoritesKey),
+      HistoryScreen(key: _historyKey),
+      const ProfileScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +48,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+          if (index == 1) _favoritesKey.currentState?.loadFavorites();
+          if (index == 2) _historyKey.currentState?.loadHistory();
+        },
         type: BottomNavigationBarType.fixed, // Essential for 4+ items
         selectedItemColor: const Color(0xFFD4AF37),
         unselectedItemColor: Colors.grey,
