@@ -29,6 +29,16 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-caches-${{ hashFiles('**/build.gradle.kts') }}
+
+      - name: Clean build
+        working-directory: ./frontend
+        run: flutter clean
+
       - name: Install Dependencies
         working-directory: ./frontend
         run: flutter pub get
