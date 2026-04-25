@@ -16,12 +16,17 @@ class NotificationService {
       android: androidInitializationSettings,
     );
 
-    // Request permissions for Android 13+
-    await _notificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
-
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
     );
+  }
+
+  static Future<void> requestPermissions() async {
+    try {
+        await _notificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+    } catch(e) {
+        debugPrint("Error requesting notification permissions: $e");
+    }
   }
 
   static Future<void> showZoneAlert() async {

@@ -4,6 +4,7 @@ import 'profile_screen.dart';
 import 'history_screen.dart';
 import 'favorites_screen.dart';
 import 'zone_status_screen.dart';
+import '../services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    NotificationService.requestPermissions();
     _pages = [
       const ChatScreen(),
       FavoritesScreen(key: _favoritesKey),
