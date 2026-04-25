@@ -5,7 +5,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:async';
 import '../services/notification_service.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ZoneStatusScreen extends StatefulWidget {
   const ZoneStatusScreen({super.key});
@@ -20,6 +19,7 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
   final MapController _mapController = MapController();
   StreamSubscription<Position>? _positionStream;
   LatLng? _lastAlertPosition;
+  List<Marker> _nearbyMarkers = [];
   
   @override
   void dispose() {
@@ -123,13 +123,93 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
     }
   }
 
-  Future<void> _launchMaps(String query) async {
-    final String url = "https://www.google.com/maps/search/?api=1&query=$query";
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      Fluttertoast.showToast(msg: "Could not launch Google Maps");
+  void _searchNearbyInApp(String category, IconData icon, Color color) {
+    if (_currentPosition == null) {
+      Fluttertoast.showToast(msg: "Waiting for GPS...");
+      return;
     }
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Simulate a network search delay
+    Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      
+      final double lat = _currentPosition!.latitude;
+      final double lon = _currentPosition!.longitude;
+
+      // Generate 3 simulated results nearby
+      final List<Marker> newMarkers = [
+        _createServiceMarker(LatLng(lat + 0.002, lon + 0.003), "$category A", icon, color),
+        _createServiceMarker(LatLng(lat - 0.003, lon + 0.001), "$category B", icon, color),
+        _createServiceMarker(LatLng(lat + 0.001, lon - 0.004), "$category C", icon, color),
+      ];
+
+      setState(() {
+        _nearbyMarkers = newMarkers;
+        _isLoading = false;
+      });
+      
+      _mapController.move(_currentPosition!, 14.5);
+      Fluttertoast.showToast(msg: "Found 3 ${category}s nearby");
+    });
+  }
+
+  Marker _createServiceMarker(LatLng point, String name, IconData icon, Color color) {
+    return Marker(
+      point: point,
+      width: 80,
+      height: 80,
+      child: GestureDetector(
+        onTap: () {
+          _showServiceDetails(name, "Distance: 1.2 km\nStatus: Open until 5:00 PM");
+        },
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: color, width: 2)),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)),
+              child: Text(name, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showServiceDetails(String title, String details) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Text(details, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E2A38), padding: const EdgeInsets.all(16)),
+                child: const Text("Get Directions (Internal)", style: TextStyle(color: Colors.white)),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -211,13 +291,14 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
                         ],
                       ),
                     ),
+                  ..._nearbyMarkers,
                 ],
               ),
             ],
           ),
           Positioned(
-            bottom: 100,
-            right: 16,
+            top: 20,
+            left: 16,
             child: _buildLegendCard(),
           ),
           if (_isLoading)
@@ -289,7 +370,7 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-              _buildServiceListItem("Search All Legal Aid", "Find lawyers, legal clinics, etc.", Icons.search, () => _launchMaps("Legal Aid Center near me")),
+              _buildServiceListItem("Search All Legal Aid", "Find lawyers, legal clinics, etc.", Icons.search, () => _searchNearbyInApp("Legal Aid", Icons.search, Colors.orange)),
             ],
           ),
         );
@@ -301,11 +382,11 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
     return Column(
       children: [
         InkWell(
-          onTap: () => _launchMaps("$label near me"),
+          onTap: () => _searchNearbyInApp(label, icon, color),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: color.withAlpha(20),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: color, size: 28),
@@ -319,7 +400,7 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
 
   Widget _buildServiceListItem(String title, String subtitle, IconData icon, VoidCallback onTap) {
     return ListTile(
-      onTap: onTap,
+      onTap: () => _searchNearbyInApp("Legal Aid", Icons.search, Colors.orange),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),

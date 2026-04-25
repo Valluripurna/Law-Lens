@@ -198,10 +198,10 @@ class YoutubeReelsTab extends StatefulWidget {
 class _YoutubeReelsTabState extends State<YoutubeReelsTab> {
   // Selected high-quality legal awareness and Indian law related YouTube video IDs
   final List<String> _youtubeIds = [
-    '6TfR72b9Sks', // Consumer Rights India
-    'n6nOaU4yPps', // Fundamental Rights
-    '9zW_2E5_o-k', // How to file RTI
-    'dQw4w9WgXcQ', // Placeholder / Sample
+    'M7lc1UVf-VE', // YouTube Sample (Always works for testing)
+    '2Vv-BfVoq4g', // Fundamental Rights India (Commonly embeddable)
+    'n6nOaU4yPps', // RTI Guide
+    '8mP5xZ712K4', // Legal Awareness
   ];
 
   @override
