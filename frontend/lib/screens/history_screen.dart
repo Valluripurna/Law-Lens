@@ -34,18 +34,38 @@ class HistoryScreenState extends State<HistoryScreen> {
       return;
     }
 
+    // 1. Instant Load from Cache
+    String? cachedHistory = prefs.getString('history_cache_$_userId');
+    if (cachedHistory != null) {
+      setState(() {
+        _history = json.decode(cachedHistory);
+        _isLoading = false;
+      });
+    }
+
+    // 2. Fetch from Server
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/api/history?userId=$_userId')).timeout(const Duration(seconds: 40));
+      final response = await http.get(Uri.parse('$_baseUrl/api/history?userId=$_userId')).timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
-        setState(() {
-          _history = json.decode(response.body);
-        });
+        // Update cache
+        await prefs.setString('history_cache_$_userId', response.body);
+        
+        if (mounted) {
+          setState(() {
+            _history = json.decode(response.body);
+            _isLoading = false;
+          });
+        }
       } else {
-        Fluttertoast.showToast(msg: "History unavailable (${response.statusCode})");
+        if (_history.isEmpty) {
+           Fluttertoast.showToast(msg: "History unavailable (${response.statusCode})");
+        }
       }
     } catch (e) {
       debugPrint("History Load Error: $e");
-      Fluttertoast.showToast(msg: "Failed to load history. Try again later.");
+      if (_history.isEmpty) {
+        Fluttertoast.showToast(msg: "Offline: Could not sync history.");
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

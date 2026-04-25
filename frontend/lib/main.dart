@@ -195,72 +195,20 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _isLoading = true;
-  bool _isLoggedIn = false;
   bool _onboardingSeen = false;
 
   @override
   void initState() {
     super.initState();
-    _checkStatus();
+    _checkOnboarding();
   }
 
-  void _checkStatus() async {
+  void _checkOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-    final onboardingSeen = prefs.getBool('onboarding_seen') ?? false;
-    
-    User? firebaseUser = FirebaseAuth.instance.currentUser;
-    bool isLoggedIn = false;
-
-    if (firebaseUser != null && firebaseUser.email != null) {
-      try {
-        // 1. Force token refresh to check Firebase Auth state
-        await firebaseUser.getIdToken(true);
-        
-        // 2. STRENGTHENED AUTH: Check Firestore database directly
-        // This ensures that if Admin deletes user from Firestore, the app kicks them out.
-        // We use Source.server to forcefully bypass the local cache for this single security check.
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(firebaseUser.email)
-            .get(const GetOptions(source: Source.serverAndCache));
-
-        if (userDoc.exists) {
-          final userData = userDoc.data();
-          if (userData != null) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('userId', firebaseUser.uid);
-            await prefs.setString('userEmail', firebaseUser.email!);
-            if (userData['photoUrl'] != null) {
-              await prefs.setString('userPhotoUrl', userData['photoUrl']);
-            }
-          }
-          isLoggedIn = true;
-        } else {
-          // Account deleted from database by Admin
-          await FirebaseAuth.instance.signOut();
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.clear(); // Wipe everything on forced logout
-          isLoggedIn = false;
-        }
-      } catch (e) {
-        // If network error, allow local session for offline sync, 
-        // but if e.code is user-not-found, log out.
-        if (e.toString().contains('user-not-found')) {
-          await FirebaseAuth.instance.signOut();
-          isLoggedIn = false;
-        } else {
-          isLoggedIn = true; // Assume logged in for intermittent network issues
-        }
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _onboardingSeen = onboardingSeen;
-        _isLoggedIn = isLoggedIn;
-        _isLoading = false;
-      });
-    }
+    setState(() {
+      _onboardingSeen = prefs.getBool('onboarding_seen') ?? false;
+      _isLoading = false;
+    });
   }
 
   @override
@@ -268,11 +216,22 @@ class _AuthWrapperState extends State<AuthWrapper> {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     if (!_onboardingSeen) {
       return const OnboardingScreen();
     }
-    
-    return _isLoggedIn ? const HomeScreen() : const LoginScreen();
+
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasData && snapshot.data != null) {
+          return const HomeScreen();
+        }
+        return const LoginScreen();
+      },
+    );
   }
 }

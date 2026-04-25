@@ -134,22 +134,6 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text("Zone Status", style: TextStyle(fontWeight: FontWeight.bold))),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(color: Color(0xFFD4AF37)),
-              SizedBox(height: 16),
-              Text('Acquiring GPS Signal...'),
-            ],
-          ),
-        ),
-      );
-    }
-
     final initialCenter = _currentPosition ?? const LatLng(20.5937, 78.9629); // Central India fallback
 
     return Scaffold(
@@ -236,6 +220,29 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
             right: 16,
             child: _buildLegendCard(),
           ),
+          if (_isLoading)
+            Positioned(
+              top: 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                      SizedBox(width: 8),
+                      Text("Updating Location...", style: TextStyle(color: Colors.white, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           _buildDraggableNearbySheet(),
         ],
       ),
