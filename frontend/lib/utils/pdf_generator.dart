@@ -88,7 +88,7 @@ class PdfGenerator {
           currentFont = fontBold;
           textToDraw = line.replaceAll('**', '').trim();
         } else if (line.startsWith('- ')) {
-          textToDraw = "• " + line.substring(2);
+          textToDraw = "• ${line.substring(2)}";
         }
 
         layoutResult = PdfTextElement(text: textToDraw, font: currentFont, brush: PdfSolidBrush(color))

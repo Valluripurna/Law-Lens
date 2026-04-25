@@ -4,6 +4,7 @@ import 'profile_screen.dart';
 import 'history_screen.dart';
 import 'favorites_screen.dart';
 import 'zone_status_screen.dart';
+import 'legal_feed_screen.dart';
 import '../services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const ChatScreen(),
       FavoritesScreen(key: _favoritesKey),
       const ZoneStatusScreen(),
+      const LegalFeedScreen(),
       HistoryScreen(key: _historyKey),
       const ProfileScreen(),
     ];
@@ -64,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
           BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favorites'),
           BottomNavigationBarItem(icon: Icon(Icons.radar), label: 'Zone'),
+          BottomNavigationBarItem(icon: Icon(Icons.tips_and_updates), label: 'Feed'),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

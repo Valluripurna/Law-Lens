@@ -489,22 +489,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (_vanishMode)
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [Colors.red.shade900.withAlpha(200), Colors.black.withAlpha(220)]),
-              border: const Border(bottom: BorderSide(color: Colors.redAccent, width: 0.5))
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.security, size: 14, color: Colors.white),
-                SizedBox(width: 8),
-                Text("Vanish Mode: Secure & Private Session Active", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-              ],
-            ),
-          ),
+
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
@@ -527,78 +512,70 @@ class _ChatScreenState extends State<ChatScreen> {
                    )
                  ],
                ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.add_comment, color: Color(0xFF1E2A38)),
-                    tooltip: "New Chat",
-                    onPressed: () {
-                      setState(() {
-                        _messages.clear();
-                        _favoritedIndices.clear();
-                        _normalChatCache.clear();
-                      });
-                      Fluttertoast.showToast(msg: "Started a fresh chat session ✨");
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                  setState(() {
-                    _vanishMode = !_vanishMode;
-                    if (_vanishMode) {
-                      // Entering Vanish Mode: Cache current chat
-                      _normalChatCache = List.from(_messages);
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Color(0xFF1E2A38)),
+                tooltip: "Chat Options",
+                onSelected: (value) {
+                  if (value == 'new_chat') {
+                    setState(() {
                       _messages.clear();
                       _favoritedIndices.clear();
-                    } else {
-                      // Exiting Vanish Mode: Restore from cache or fetch latest history
-                      _messages.clear();
-                      if (_normalChatCache.isNotEmpty) {
-                        _messages.addAll(_normalChatCache);
-                        _normalChatCache.clear();
+                      _normalChatCache.clear();
+                    });
+                    Fluttertoast.showToast(msg: "Started a fresh chat session ✨");
+                  } else if (value == 'vanish') {
+                    setState(() {
+                      _vanishMode = !_vanishMode;
+                      if (_vanishMode) {
+                        _normalChatCache = List.from(_messages);
+                        _messages.clear();
+                        _favoritedIndices.clear();
                       } else {
-                        _fetchHistory();
+                        _messages.clear();
+                        if (_normalChatCache.isNotEmpty) {
+                          _messages.addAll(_normalChatCache);
+                          _normalChatCache.clear();
+                        } else {
+                          _fetchHistory();
+                        }
                       }
-                    }
-                  });
-                  Fluttertoast.showToast(
-                    msg: _vanishMode ? "Vanish Mode ON - Data not saved" : "Vanish Mode OFF - Syncing history",
-                    gravity: ToastGravity.TOP,
-                    backgroundColor: _vanishMode ? Colors.redAccent : const Color(0xFF1E2A38),
-                  );
+                    });
+                    Fluttertoast.showToast(
+                      msg: _vanishMode ? "Vanish Mode ON - Data not saved" : "Vanish Mode OFF - Syncing history",
+                      backgroundColor: _vanishMode ? Colors.redAccent : const Color(0xFF1E2A38),
+                    );
+                  }
                 },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _vanishMode ? Colors.redAccent : Colors.grey.withAlpha(30),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _vanishMode ? Colors.red : Colors.grey.shade300)
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'new_chat',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add_comment, size: 20, color: Color(0xFF1E2A38)),
+                        SizedBox(width: 12),
+                        Text("New Chat"),
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _vanishMode ? Icons.visibility_off_outlined : Icons.shield_outlined, 
-                        size: 18, 
-                        color: _vanishMode ? Colors.white : Colors.grey.shade600
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        "Vanish", 
-                        style: TextStyle(
-                          fontSize: 12, 
-                          fontWeight: FontWeight.bold,
-                          color: _vanishMode ? Colors.white : Colors.grey.shade700
-                        )
-                      ),
-                    ],
+                  PopupMenuItem(
+                    value: 'vanish',
+                    child: Row(
+                      children: [
+                        Icon(
+                          _vanishMode ? Icons.visibility : Icons.visibility_off, 
+                          size: 20, 
+                          color: _vanishMode ? Colors.redAccent : Colors.grey
+                        ),
+                        const SizedBox(width: 12),
+                        Text(_vanishMode ? "Exit Vanish Mode" : "Vanish Mode"),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
-              ],
-            ),
-          ),
+        ],
+      ),
+    ),
         Expanded(
           child: ListView.builder(
             controller: _chatScrollController,

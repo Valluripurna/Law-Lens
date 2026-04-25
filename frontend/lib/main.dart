@@ -222,7 +222,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(firebaseUser.email)
-            .get(const GetOptions(source: Source.server));
+            .get(const GetOptions(source: Source.serverAndCache));
 
         if (userDoc.exists) {
           final userData = userDoc.data();
