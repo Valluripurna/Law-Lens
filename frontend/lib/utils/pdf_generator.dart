@@ -55,9 +55,45 @@ class PdfGenerator {
           .draw(page: page, bounds: Rect.fromLTWH(0, yOffset, clientSize.width, clientSize.height - yOffset))!;
       yOffset = qResult.bounds.bottom + 20;
 
-      // Answer
-      PdfTextElement(text: "AI Response:\n\n$answer", font: fontText)
-          .draw(page: page, bounds: Rect.fromLTWH(0, yOffset, clientSize.width, clientSize.height - yOffset));
+      // Answer Header
+      final PdfLayoutFormat layoutFormat = PdfLayoutFormat(layoutType: PdfLayoutType.paginate);
+      PdfLayoutResult? layoutResult = PdfTextElement(text: "AI Response:", font: PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold), brush: PdfSolidBrush(PdfColor(0, 51, 102)))
+          .draw(page: page, bounds: Rect.fromLTWH(0, yOffset, clientSize.width, 0), format: layoutFormat);
+          
+      final PdfFont fontHeading1 = PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold);
+      final PdfFont fontHeading2 = PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold);
+      final PdfFont fontBold = PdfStandardFont(PdfFontFamily.helvetica, 12, style: PdfFontStyle.bold);
+
+      final lines = answer.split('\n');
+      for (String line in lines) {
+        if (line.trim().isEmpty) {
+          layoutResult = PdfTextElement(text: " ")
+             .draw(page: layoutResult!.page, bounds: Rect.fromLTWH(0, layoutResult.bounds.bottom + 5, clientSize.width, 0), format: layoutFormat);
+          continue;
+        }
+        
+        PdfFont currentFont = fontText;
+        String textToDraw = line;
+        PdfColor color = PdfColor(0, 0, 0);
+
+        if (line.startsWith('###')) {
+          currentFont = fontHeading2;
+          textToDraw = line.replaceAll('#', '').trim();
+          color = PdfColor(0, 51, 102); // Navy Blue
+        } else if (line.startsWith('##') || line.startsWith('#')) {
+          currentFont = fontHeading1;
+          textToDraw = line.replaceAll('#', '').trim();
+          color = PdfColor(0, 51, 102);
+        } else if (line.contains('**')) {
+          currentFont = fontBold;
+          textToDraw = line.replaceAll('**', '').trim();
+        } else if (line.startsWith('- ')) {
+          textToDraw = "• " + line.substring(2);
+        }
+
+        layoutResult = PdfTextElement(text: textToDraw, font: currentFont, brush: PdfSolidBrush(color))
+             .draw(page: layoutResult!.page, bounds: Rect.fromLTWH(0, layoutResult.bounds.bottom + 6, clientSize.width, 0), format: layoutFormat);
+      }
 
       // Save file
       final List<int> bytes = await document.save();

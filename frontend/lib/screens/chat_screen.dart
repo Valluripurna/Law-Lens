@@ -13,6 +13,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -35,6 +36,10 @@ class _ChatScreenState extends State<ChatScreen> {
   
   bool _isLoading = false;
   bool _vanishMode = false;
+  
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  
   String? _userId;
   String _language = "English";
   String? _attachedImagePath;
@@ -309,6 +314,37 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _listenVoice() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (val) {
+           if (val == 'done' || val == 'notListening') {
+             if (mounted) setState(() => _isListening = false);
+           }
+        },
+        onError: (val) {
+           if (mounted) setState(() => _isListening = false);
+           Fluttertoast.showToast(msg: "Voice recognition error: ${val.errorMsg}");
+        },
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) {
+            setState(() {
+              _messageController.text = val.recognizedWords;
+            });
+          },
+        );
+      } else {
+        Fluttertoast.showToast(msg: "Voice recognition denied or unavailable.");
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
+
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
@@ -491,8 +527,23 @@ class _ChatScreenState extends State<ChatScreen> {
                    )
                  ],
                ),
-              GestureDetector(
-                onTap: () {
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.add_comment, color: Color(0xFF1E2A38)),
+                    tooltip: "New Chat",
+                    onPressed: () {
+                      setState(() {
+                        _messages.clear();
+                        _favoritedIndices.clear();
+                        _normalChatCache.clear();
+                      });
+                      Fluttertoast.showToast(msg: "Started a fresh chat session ✨");
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
                   setState(() {
                     _vanishMode = !_vanishMode;
                     if (_vanishMode) {
@@ -544,10 +595,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                 ),
-              )
-            ],
+              ),
+              ],
+            ),
           ),
-        ),
         Expanded(
           child: ListView.builder(
             controller: _chatScrollController,
@@ -737,6 +788,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   onSubmitted: _sendMessage,
+                ),
+              ),
+              const SizedBox(width: 8),
+              CircleAvatar(
+                backgroundColor: _isListening ? Colors.redAccent : Colors.grey.shade200,
+                child: IconButton(
+                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none, color: _isListening ? Colors.white : const Color(0xFF1E2A38)),
+                  onPressed: _listenVoice,
                 ),
               ),
               const SizedBox(width: 8),

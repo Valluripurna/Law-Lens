@@ -60,7 +60,25 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
     } 
 
     try {
-      Position initialPosition = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.best));
+      // 1. Instantly try to get last known position for fast UI load
+      Position? lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null && mounted) {
+        setState(() {
+          _currentPosition = LatLng(lastKnown.latitude, lastKnown.longitude);
+          _lastAlertPosition = _currentPosition;
+          _isLoading = false;
+        });
+        _mapController.move(_currentPosition!, 14.0);
+      }
+
+      // 2. Try to get fresh highly accurate position with a timeout
+      Position initialPosition = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.best)
+      ).timeout(const Duration(seconds: 5), onTimeout: () {
+        if (lastKnown != null) return lastKnown;
+        throw TimeoutException("GPS lock timed out.");
+      });
+      
       if (!mounted) return;
       setState(() {
         _currentPosition = LatLng(initialPosition.latitude, initialPosition.longitude);
@@ -94,8 +112,14 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
         }
       });
     } catch (e) {
-      Fluttertoast.showToast(msg: 'Error getting location.');
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+         setState(() {
+            _isLoading = false;
+            // Fallback to central India if completely failed
+            _currentPosition ??= const LatLng(20.5937, 78.9629); 
+         });
+      }
+      Fluttertoast.showToast(msg: 'GPS signal weak. Using fallback location.');
     }
   }
 
