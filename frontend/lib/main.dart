@@ -17,6 +17,13 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Enable Offline Caching & Lazy Loading Database Engine
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
   try {
     await NotificationService.initialize();
     await NotificationService.scheduleDailyReminder();
@@ -211,10 +218,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
         
         // 2. STRENGTHENED AUTH: Check Firestore database directly
         // This ensures that if Admin deletes user from Firestore, the app kicks them out.
+        // We use Source.server to forcefully bypass the local cache for this single security check.
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(firebaseUser.email)
-            .get();
+            .get(const GetOptions(source: Source.server));
 
         if (userDoc.exists) {
           final userData = userDoc.data();

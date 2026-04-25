@@ -75,6 +75,23 @@ if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.length < 20) {
   process.exit(1); // Force crash the server so it doesn't fail silently later
 }
 
+// Global Memory Cache for Legal Data
+let cachedLegalData = null;
+let lastCacheTime = 0;
+const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 Hours
+
+const getLegalData = async () => {
+  if (cachedLegalData && Date.now() - lastCacheTime < CACHE_TTL) {
+    return cachedLegalData;
+  }
+  const snapshot = await firestore.collection('legal_data').get();
+  cachedLegalData = [];
+  snapshot.forEach(doc => cachedLegalData.push(doc.data()));
+  lastCacheTime = Date.now();
+  console.log(`[Cache] Loaded ${cachedLegalData.length} legal records into memory.`);
+  return cachedLegalData;
+};
+
 // Optimized RAG Helper
 const findRelevantLawsFirestore = async (query) => {
   const start = Date.now();
@@ -88,12 +105,10 @@ const findRelevantLawsFirestore = async (query) => {
   const targetSection = sectionMatch ? sectionMatch[1] : null;
 
   try {
-    const lawsRef = firestore.collection('legal_data');
-    const snapshot = await lawsRef.get();
+    const allLaws = await getLegalData();
     
     let matchedLaws = [];
-    snapshot.forEach(doc => {
-      const law = doc.data();
+    for (const law of allLaws) {
       let score = 0;
       
       const keywords = (law.keywords || "").toLowerCase();
@@ -110,7 +125,7 @@ const findRelevantLawsFirestore = async (query) => {
       });
 
       if (score > 0) matchedLaws.push({ ...law, score });
-    });
+    }
 
     matchedLaws.sort((a, b) => b.score - a.score);
     const results = matchedLaws.slice(0, 3);

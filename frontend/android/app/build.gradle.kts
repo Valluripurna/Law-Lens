@@ -36,7 +36,12 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.create("release") {
+                storeFile = file("release.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
             isMinifyEnabled = false
             isShrinkResources = false
         }
