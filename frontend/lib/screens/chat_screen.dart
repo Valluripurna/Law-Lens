@@ -129,23 +129,32 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _speak(int index, String text) async {
+    // Strip markdown characters for cleaner speech
+    String cleanText = text.replaceAll(RegExp(r'[*#_~`]'), '');
+    
     if (_playingIndex == index) {
       if (_isPlaying) {
-        await _flutterTts.pause();
+        await _flutterTts.stop();
         setState(() => _isPlaying = false);
       } else {
-        await _flutterTts.speak(text);
+        await _flutterTts.setLanguage("en-IN");
+        await _flutterTts.speak(cleanText);
         setState(() => _isPlaying = true);
       }
     } else {
       await _flutterTts.stop();
-      await _flutterTts.setLanguage("en-IN");
+      try {
+        await _flutterTts.setLanguage("en-IN");
+      } catch (e) {
+        await _flutterTts.setLanguage("en-US");
+      }
       await _flutterTts.setPitch(1.0);
+      await _flutterTts.setSpeechRate(0.5);
       setState(() {
         _playingIndex = index;
         _isPlaying = true;
       });
-      await _flutterTts.speak(text);
+      await _flutterTts.speak(cleanText);
     }
   }
 
@@ -700,7 +709,11 @@ class _ChatScreenState extends State<ChatScreen> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 child: ActionChip(
-                  label: Text(q, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  label: Text(q, style: TextStyle(
+                    fontSize: 12, 
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.black87 : Colors.black87,
+                  )),
                   backgroundColor: chipColor,
                   side: BorderSide.none,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

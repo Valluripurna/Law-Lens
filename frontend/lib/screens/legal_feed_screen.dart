@@ -196,12 +196,14 @@ class YoutubeReelsTab extends StatefulWidget {
 }
 
 class _YoutubeReelsTabState extends State<YoutubeReelsTab> {
-  // Selected high-quality legal awareness and Indian law related YouTube video IDs
+  // Curated list of strictly Indian Legal & Traffic awareness videos
   final List<String> _youtubeIds = [
-    'M7lc1UVf-VE', // YouTube Sample (Always works for testing)
-    '2Vv-BfVoq4g', // Fundamental Rights India (Commonly embeddable)
-    'n6nOaU4yPps', // RTI Guide
-    '8mP5xZ712K4', // Legal Awareness
+    '2Vv-BfVoq4g', // Fundamental Rights Explained
+    'n6nOaU4yPps', // RTI Guide (How to file)
+    '6TfR72b9Sks', // Consumer Rights in India
+    'uLNo_5M41Z4', // Traffic Rules & Fines 2024
+    '8mP5xZ712K4', // Legal Awareness Masterclass
+    'P67X8iYV2rA', // FIR Procedure
   ];
 
   @override

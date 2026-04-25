@@ -140,11 +140,22 @@ class _ZoneStatusScreenState extends State<ZoneStatusScreen> {
       final double lat = _currentPosition!.latitude;
       final double lon = _currentPosition!.longitude;
 
-      // Generate 3 simulated results nearby
+      // Generate 3 simulated results nearby with distinct offsets based on category
+      double latOffset = 0.005;
+      double lonOffset = 0.005;
+      
+      if (category == "Police") {
+        latOffset = 0.002; lonOffset = 0.003;
+      } else if (category == "District Court") {
+        latOffset = -0.004; lonOffset = -0.002;
+      } else if (category == "High Court") {
+        latOffset = 0.006; lonOffset = -0.005;
+      }
+
       final List<Marker> newMarkers = [
-        _createServiceMarker(LatLng(lat + 0.002, lon + 0.003), "$category A", icon, color),
-        _createServiceMarker(LatLng(lat - 0.003, lon + 0.001), "$category B", icon, color),
-        _createServiceMarker(LatLng(lat + 0.001, lon - 0.004), "$category C", icon, color),
+        _createServiceMarker(LatLng(lat + latOffset, lon + lonOffset), "$category A", icon, color),
+        _createServiceMarker(LatLng(lat + (latOffset * 1.5), lon - (lonOffset * 0.5)), "$category B", icon, color),
+        _createServiceMarker(LatLng(lat - (latOffset * 0.8), lon + (lonOffset * 1.2)), "$category C", icon, color),
       ];
 
       setState(() {
